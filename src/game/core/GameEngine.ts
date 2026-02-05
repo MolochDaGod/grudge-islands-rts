@@ -18,6 +18,8 @@ import { TowerUI } from '../../ui/TowerUI.ts';
 import { getAllUnitTypes } from '../../data/unitTypes.ts';
 import { sceneManager, HeroCreationData } from './SceneManager.ts';
 import { Hero } from '../entities/Hero.ts';
+import { UnitMovementSystem } from '../systems/UnitMovement.ts';
+import { AIController } from '../systems/AIController.ts';
 
 export class GameEngine {
   // Core systems
@@ -31,6 +33,10 @@ export class GameEngine {
   private buildingManager!: BuildingManager;
   private towerManager!: TowerManager;
   private towerUI!: TowerUI;
+  
+  // Movement and AI systems
+  private movementSystem!: UnitMovementSystem;
+  private aiController!: AIController;
   
   // Player resources
   private playerGold: number = 500;
@@ -112,6 +118,22 @@ export class GameEngine {
     this.buildingManager = new BuildingManager();
     this.towerManager = new TowerManager();
     this.towerUI = new TowerUI();
+    
+    // Initialize movement and AI systems
+    this.movementSystem = new UnitMovementSystem();
+    this.aiController = new AIController();
+    
+    // Setup walkability check for movement system
+    this.movementSystem.setWalkableCallback((x, y) => this.worldGenerator.isWalkable(x, y));
+    
+    // Connect AI to movement system
+    this.aiController.setMovementSystem(this.movementSystem);
+    
+    // Setup AI attack callback
+    this.aiController.onAttack = (attackerId, targetId, damage) => {
+      console.log(`AI ${attackerId} attacks ${targetId} for ${damage} damage`);
+      // TODO: Apply damage to target entity
+    };
     
     // Setup tower callbacks
     this.towerUI.onUpgrade = (towerId) => this.handleTowerUpgrade(towerId);
@@ -217,12 +239,15 @@ export class GameEngine {
       
       // Only spawn if position is walkable
       if (this.worldGenerator.isWalkable(x, y)) {
+        const unitId = generateId();
         this.entitySystem.registerEntity({
-          id: generateId(),
+          id: unitId,
           faction: 1 as FactionId,
           size: 16,
           position: { x, y }
         });
+        // Register with movement system
+        this.movementSystem.registerUnit(unitId, { x, y }, 1 as FactionId, 80);
         spawnedPlayerUnits++;
       }
       attempts++;
@@ -241,11 +266,21 @@ export class GameEngine {
         
         // Only spawn if position is walkable
         if (this.worldGenerator.isWalkable(x, y)) {
+          const unitId = generateId();
           this.entitySystem.registerEntity({
-            id: generateId(),
+            id: unitId,
             faction: 2 as FactionId,
             size: 16,
             position: { x, y }
+          });
+          // Register with movement and AI systems
+          this.movementSystem.registerUnit(unitId, { x, y }, 2 as FactionId, 60);
+          this.aiController.registerUnit(unitId, { x, y }, 2 as FactionId, {
+            health: 100,
+            maxHealth: 100,
+            attackDamage: 10,
+            attackRange: 50,
+            aggroRange: 200
           });
           spawnedEnemyUnits++;
         }
@@ -447,14 +482,38 @@ export class GameEngine {
       this.playerHero.update(deltaTime);
     }
     
+    // Update movement system
+    const updatedPositions = this.movementSystem.update(deltaTime);
+    
+    // Sync positions with entity system
+    for (const [id, pos] of updatedPositions) {
+      this.entitySystem.updateEntityPosition(id, pos);
+      this.aiController.updateUnitPosition(id, pos);
+    }
+    
+    // Update AI controller (for enemy units)
+    const playerUnitsMap = new Map<string, { position: Position; health: number }>();
+    const allEntities = this.entitySystem.getAllEntities();
+    for (const entity of allEntities) {
+      if ((entity.faction as number) === 1) {
+        playerUnitsMap.set(entity.id, {
+          position: entity.position,
+          health: 100 // TODO: Track actual health
+        });
+      }
+    }
+    // Add hero to player units
+    if (this.playerHero && !this.playerHero.isDead()) {
+      playerUnitsMap.set(this.playerHero.id, {
+        position: this.playerHero.position,
+        health: this.playerHero.stats.health
+      });
+    }
+    this.aiController.updatePlayerUnits(playerUnitsMap);
+    this.aiController.update(deltaTime);
+    
     // Passive gold income
     this.playerGold += deltaTime * 2; // 2 gold per second
-    
-    // TODO: Update remaining systems
-    // - Unit AI and movement
-    // - Combat calculations
-    // - Node capture mechanics
-    // - AI controller updates
   }
   
   /**
@@ -714,7 +773,24 @@ export class GameEngine {
         // Cancel building placement
         this.buildingManager.closeBuildMenu();
       } else {
-        // Issue command
+        // Issue move command to selected units
+        const worldX = this.renderer.screenToWorldX(e.clientX);
+        const worldY = this.renderer.screenToWorldY(e.clientY);
+        
+        // Get selected entities from renderer
+        const selectedIds = this.renderer.getSelectedEntityIds();
+        
+        if (selectedIds.length > 0) {
+          // Issue move commands to all selected units
+          for (const id of selectedIds) {
+            this.movementSystem.commandMove(id, { x: worldX, y: worldY });
+          }
+        } else if (this.playerHero) {
+          // No selection - move hero
+          this.playerHero.moveTo(worldX, worldY);
+        }
+        
+        // Also call renderer's issueCommand for visual feedback
         this.renderer.issueCommand(e.clientX, e.clientY);
       }
     }

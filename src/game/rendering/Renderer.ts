@@ -523,6 +523,10 @@ export class Renderer {
     return this.selectedEntityIds.size;
   }
   
+  getSelectedEntityIds(): string[] {
+    return Array.from(this.selectedEntityIds);
+  }
+  
   getZoom(): number {
     return this.zoomLevel;
   }
