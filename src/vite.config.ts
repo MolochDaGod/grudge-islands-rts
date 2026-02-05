@@ -5,10 +5,13 @@ export default defineConfig({
   base: './',
   server: {
     port: 3000,
-    open: true,
+    open: '/game.html',
   },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    rollupOptions: {
+      input: 'game.html',
+    },
   },
 });
