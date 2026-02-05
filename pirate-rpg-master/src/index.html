@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <title>Avast!</title>
+    <style>
+      @font-face {
+        font-family: 'GraphicPixel';
+        src: url('../public/fonts/graphicpixel.ttf');
+      }
+      html,
+      body {
+        backface-visibility: hidden;
+        -webkit-font-smoothing: subpixel-antialiased;
+      }
+      .testJsx {
+        width: 100px;
+        height: 100px;
+        font-size: 10px;
+        font-family: 'GraphicPixel';
+      }
+    </style>
+  </head>
+  <body oncontextmenu="return false;" style="margin: 0px">
+    <div id="phaser" style="background-color: black"></div>
+
+    <script src="jsx-dom-shim.ts"></script>
+    <script src="main.ts"></script>
+  </body>
+</html>
