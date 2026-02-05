@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Vercel
+.vercel
+
+# Large binary assets (download separately)
+addons/
+pirate-rpg-master/
+Sound_effects_Pack*/
+data-exports/
+data-exports (2)/
+Tiny Swords*/
+Grudge Warlords*
+*.glb
+*.fbx
+*.zip
+*.ai
+*.psd

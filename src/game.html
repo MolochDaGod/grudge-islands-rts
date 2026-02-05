@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grudge Islands RTS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #141a2b;
+      --text: #e8eaf6;
+      --muted: #a5b4d0;
+      --border: #2a3150;
+      --accent: #6ee7b7;
+      --danger: #ef4444;
+      --player-blue: #0066FF;
+      --goblin-red: #FF0000;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Jost', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .font-cinzel { font-family: 'Cinzel', serif; }
+
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    #bgCanvas { z-index: 0; }
+    #fgCanvas { z-index: 1; }
+    #uiCanvas { z-index: 2; pointer-events: none; }
+
+    /* Loading Screen */
+    #loadingScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    #loadingScreen h1 {
+      color: var(--accent);
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    .loading-bar {
+      width: 300px;
+      height: 20px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .loading-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #10b981);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    #loadingText {
+      margin-top: 15px;
+      color: var(--muted);
+    }
+
+    /* HUD */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #topBar {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: linear-gradient(180deg, rgba(11,16,32,0.9), transparent);
+    }
+
+    .resource-display {
+      display: flex;
+      gap: 20px;
+    }
+
+    .resource-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      background: rgba(20,26,43,0.8);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .resource-value {
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    #fpsCounter {
+      color: var(--accent);
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+
+    .gold-display {
+      background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1)) !important;
+      border-color: #ffd700 !important;
+    }
+
+    .gold-display .resource-value {
+      color: #ffd700;
+    }
+
+    .hotkey-hints {
+      display: flex;
+      gap: 10px;
+    }
+
+    .hotkey-hint {
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      background: rgba(20,26,43,0.6);
+      border-radius: 4px;
+    }
+
+    /* Minimap */
+    #minimap {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 200px;
+      height: 200px;
+      background: rgba(20,26,43,0.9);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      pointer-events: auto;
+      z-index: 10;
+    }
+
+    #minimapCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 6px;
+    }
+
+    /* Unit Info Panel */
+    #unitInfo {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 300px;
+      background: rgba(20,26,43,0.95);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      pointer-events: auto;
+      z-index: 10;
+      display: none;
+    }
+
+    #unitInfo.visible { display: block; }
+
+    #unitInfo h3 {
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+      font-size: 0.9rem;
+    }
+
+    .stat-label { color: var(--muted); }
+    .stat-value { color: var(--text); font-weight: 600; }
+
+    /* Action Bar */
+    #actionBar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(20,26,43,0.95);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      pointer-events: auto;
+      z-index: 10;
+    }
+
+    .action-btn {
+      width: 50px;
+      height: 50px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text);
+      font-size: 1.2rem;
+    }
+
+    .action-btn:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .action-btn .hotkey {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 0.6rem;
+      color: var(--muted);
+    }
+
+    /* Pause Menu */
+    #pauseMenu {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(20,26,43,0.98);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      z-index: 50;
+      display: none;
+    }
+
+    #pauseMenu.visible { display: block; }
+
+    #pauseMenu h2 {
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .menu-btn {
+      display: block;
+      width: 200px;
+      padding: 12px;
+      margin: 10px auto;
+      background: var(--border);
+      border: none;
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .menu-btn:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <!-- Game Canvases -->
+    <canvas id="bgCanvas" class="canvas"></canvas>
+    <canvas id="fgCanvas" class="canvas"></canvas>
+    <canvas id="uiCanvas" class="canvas"></canvas>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen">
+      <h1 class="font-cinzel">⚔️ Grudge Islands</h1>
+      <div class="loading-bar">
+        <div class="loading-progress" id="loadingProgress"></div>
+      </div>
+      <p id="loadingText">Loading assets...</p>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div id="topBar">
+        <div class="resource-display">
+          <div class="resource-item gold-display">
+            <span>💰</span>
+            <span class="resource-value" id="goldCount">500</span>
+          </div>
+          <div class="resource-item">
+            <span>👥 Units:</span>
+            <span class="resource-value" id="unitCount">0</span>
+          </div>
+          <div class="resource-item">
+            <span style="color: var(--player-blue);">⚑</span>
+            <span class="resource-value" id="playerNodes">0</span>
+          </div>
+          <div class="resource-item">
+            <span style="color: var(--goblin-red);">⚑</span>
+            <span class="resource-value" id="enemyNodes">0</span>
+          </div>
+        </div>
+        <div class="hotkey-hints">
+          <span class="hotkey-hint">[T] Towers</span>
+          <span class="hotkey-hint">[B] Buildings</span>
+        </div>
+        <div id="fpsCounter">FPS: 60</div>
+      </div>
+    </div>
+
+    <!-- Minimap -->
+    <div id="minimap">
+      <canvas id="minimapCanvas" width="196" height="196"></canvas>
+    </div>
+
+    <!-- Unit Info Panel -->
+    <div id="unitInfo">
+      <h3 id="unitName">Unit Name</h3>
+      <div class="stat-row">
+        <span class="stat-label">Health</span>
+        <span class="stat-value" id="unitHealth">100/100</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Damage</span>
+        <span class="stat-value" id="unitDamage">10</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Combat Power</span>
+        <span class="stat-value" id="unitCP">500</span>
+      </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div id="actionBar">
+      <div class="action-btn" title="Attack Move (A)">⚔️<span class="hotkey">A</span></div>
+      <div class="action-btn" title="Stop (S)">⏹️<span class="hotkey">S</span></div>
+      <div class="action-btn" title="Hold Position (H)">🛡️<span class="hotkey">H</span></div>
+      <div class="action-btn" title="Patrol (P)">🔄<span class="hotkey">P</span></div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pauseMenu">
+      <h2 class="font-cinzel">⏸️ Paused</h2>
+      <button class="menu-btn" id="resumeBtn">Resume Game</button>
+      <button class="menu-btn" id="settingsBtn">Settings</button>
+      <button class="menu-btn" id="quitBtn">Quit to Menu</button>
+    </div>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
