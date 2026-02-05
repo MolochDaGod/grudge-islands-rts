@@ -16,6 +16,8 @@ import { BuildingManager } from '../entities/Building.ts';
 import { TowerManager } from '../entities/TowerSystem.ts';
 import { TowerUI } from '../../ui/TowerUI.ts';
 import { getAllUnitTypes } from '../../data/unitTypes.ts';
+import { sceneManager, HeroCreationData } from './SceneManager.ts';
+import { Hero } from '../entities/Hero.ts';
 
 export class GameEngine {
   // Core systems
@@ -32,6 +34,9 @@ export class GameEngine {
   
   // Player resources
   private playerGold: number = 500;
+  
+  // Player hero
+  private playerHero: Hero | null = null;
   
   // Canvas elements
   private bgCanvas!: HTMLCanvasElement;
@@ -52,7 +57,6 @@ export class GameEngine {
   private isRunning: boolean = false;
   
   // UI Elements
-  private loadingScreen!: HTMLElement;
   private loadingProgress!: HTMLElement;
   private loadingText!: HTMLElement;
   private fpsCounter!: HTMLElement;
@@ -72,7 +76,6 @@ export class GameEngine {
     console.log('Grudge Islands RTS - Initializing...');
     
     // Get UI elements
-    this.loadingScreen = document.getElementById('loadingScreen')!;
     this.loadingProgress = document.getElementById('loadingProgress')!;
     this.loadingText = document.getElementById('loadingText')!;
     this.fpsCounter = document.getElementById('fpsCounter')!;
@@ -135,14 +138,31 @@ export class GameEngine {
     this.updateLoadingState('Ready!', 100);
     await this.delay(500);
     
-    // Hide loading screen and start game
-    this.loadingScreen.style.display = 'none';
-    this.gamePhase = 'playing';
+    // Initialize scene manager
+    sceneManager.init();
     
-    // Setup initial game state
-    this.setupInitialState();
+    // Setup scene change callback
+    sceneManager.onSceneChange = (from, to) => {
+      console.log(`Scene transition: ${from} -> ${to}`);
+      if (to === 'playing') {
+        this.gamePhase = 'playing';
+      } else if (to === 'paused') {
+        this.gamePhase = 'paused';
+      } else if (to === 'menu') {
+        this.gamePhase = 'menu';
+      }
+    };
     
-    // Start game loop
+    // Setup hero creation callback
+    sceneManager.onHeroCreated = (heroData: HeroCreationData) => {
+      console.log('Hero created:', heroData);
+      this.setupInitialState(heroData);
+    };
+    
+    // Transition to main menu
+    sceneManager.transitionTo('menu');
+    
+    // Start game loop (runs even in menu for background rendering)
     this.start();
     
     console.log('Grudge Islands RTS - Initialized!');
@@ -172,39 +192,64 @@ export class GameEngine {
   /**
    * Setup initial game state with islands, units, and boats
    */
-  private setupInitialState(): void {
+  private setupInitialState(heroData?: HeroCreationData): void {
     const playerIsland = this.worldGenerator.getPlayerStartIsland();
     const enemyIslands = this.worldGenerator.getEnemyIslands();
     
-    // Spawn player units on their starting island
-    for (let i = 0; i < 15; i++) {
-      const angle = (i / 15) * Math.PI * 2;
-      const radius = 80 + Math.random() * 40;
+    // Create player hero if hero data provided
+    if (heroData) {
+      // Find a valid walkable spawn point for the hero
+      const heroSpawn = this.findWalkablePosition(playerIsland.center.x, playerIsland.center.y, 50);
+      this.playerHero = new Hero(heroData, heroSpawn);
+      console.log(`Hero ${heroData.name} (${heroData.heroClass}) spawned at`, heroSpawn);
+    }
+    
+    // Spawn player units on their starting island (only on walkable terrain)
+    let spawnedPlayerUnits = 0;
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    while (spawnedPlayerUnits < 15 && attempts < maxAttempts) {
+      const angle = (spawnedPlayerUnits / 15) * Math.PI * 2 + Math.random() * 0.5;
+      const radius = 80 + Math.random() * 60;
       const x = playerIsland.center.x + Math.cos(angle) * radius;
       const y = playerIsland.center.y + Math.sin(angle) * radius;
       
-      this.entitySystem.registerEntity({
-        id: generateId(),
-        faction: 1 as FactionId,
-        size: 16,
-        position: { x, y }
-      });
-    }
-    
-    // Spawn enemy units on enemy islands
-    for (const island of enemyIslands) {
-      for (let i = 0; i < 10; i++) {
-        const angle = (i / 10) * Math.PI * 2;
-        const radius = 60 + Math.random() * 40;
-        const x = island.center.x + Math.cos(angle) * radius;
-        const y = island.center.y + Math.sin(angle) * radius;
-        
+      // Only spawn if position is walkable
+      if (this.worldGenerator.isWalkable(x, y)) {
         this.entitySystem.registerEntity({
           id: generateId(),
-          faction: 2 as FactionId,
+          faction: 1 as FactionId,
           size: 16,
           position: { x, y }
         });
+        spawnedPlayerUnits++;
+      }
+      attempts++;
+    }
+    
+    // Spawn enemy units on enemy islands (only on walkable terrain)
+    for (const island of enemyIslands) {
+      let spawnedEnemyUnits = 0;
+      attempts = 0;
+      
+      while (spawnedEnemyUnits < 10 && attempts < maxAttempts) {
+        const angle = (spawnedEnemyUnits / 10) * Math.PI * 2 + Math.random() * 0.5;
+        const radius = 60 + Math.random() * 50;
+        const x = island.center.x + Math.cos(angle) * radius;
+        const y = island.center.y + Math.sin(angle) * radius;
+        
+        // Only spawn if position is walkable
+        if (this.worldGenerator.isWalkable(x, y)) {
+          this.entitySystem.registerEntity({
+            id: generateId(),
+            faction: 2 as FactionId,
+            size: 16,
+            position: { x, y }
+          });
+          spawnedEnemyUnits++;
+        }
+        attempts++;
       }
     }
     
@@ -214,11 +259,38 @@ export class GameEngine {
       this.boatManager.createBoat(1 as FactionId, dock, 'medium');
     }
     
-    // Center camera on player's island
+    // Center camera on player's island (or hero)
+    const focusX = this.playerHero ? this.playerHero.position.x : playerIsland.center.x;
+    const focusY = this.playerHero ? this.playerHero.position.y : playerIsland.center.y;
     this.renderer.setCameraPosition(
-      playerIsland.center.x - window.innerWidth / 2,
-      playerIsland.center.y - window.innerHeight / 2
+      focusX - window.innerWidth / 2,
+      focusY - window.innerHeight / 2
     );
+  }
+  
+  /**
+   * Find a walkable position near the given coordinates
+   */
+  private findWalkablePosition(centerX: number, centerY: number, maxRadius: number): { x: number; y: number } {
+    // Try center first
+    if (this.worldGenerator.isWalkable(centerX, centerY)) {
+      return { x: centerX, y: centerY };
+    }
+    
+    // Spiral outward to find walkable position
+    for (let radius = 10; radius <= maxRadius; radius += 10) {
+      for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        
+        if (this.worldGenerator.isWalkable(x, y)) {
+          return { x, y };
+        }
+      }
+    }
+    
+    // Fallback to center
+    return { x: centerX, y: centerY };
   }
   
   /**
@@ -233,7 +305,8 @@ export class GameEngine {
     this.fgCanvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
     this.fgCanvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
     this.fgCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-    this.fgCanvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
+    // Must use { passive: false } to enable preventDefault for wheel zoom
+    this.fgCanvas.addEventListener('wheel', (e) => this.handleMouseWheel(e), { passive: false });
     this.fgCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
     
     // Pause menu buttons
@@ -302,12 +375,14 @@ export class GameEngine {
     }
     
     // Update game state
-    if (this.gamePhase === 'playing') {
+    if (this.gamePhase === 'playing' && sceneManager.isPlaying()) {
       this.update(deltaTime * GAME_SPEED_MULTIPLIER);
     }
     
-    // Render
-    this.render(deltaTime);
+    // Only render game if not in menu/hero creation
+    if (sceneManager.isPlaying() || sceneManager.isPaused()) {
+      this.render(deltaTime);
+    }
     
     // Update HUD
     this.updateHUD();
@@ -366,6 +441,11 @@ export class GameEngine {
     
     // Update tower UI state
     this.towerUI.handleMouseMove(this.mouseX, this.mouseY);
+    
+    // Update player hero
+    if (this.playerHero && !this.playerHero.isDead()) {
+      this.playerHero.update(deltaTime);
+    }
     
     // Passive gold income
     this.playerGold += deltaTime * 2; // 2 gold per second
@@ -662,27 +742,20 @@ export class GameEngine {
   // === GAME STATE METHODS ===
   
   private togglePause(): void {
-    if (this.gamePhase === 'playing') {
-      this.pause();
-    } else if (this.gamePhase === 'paused') {
-      this.resume();
-    }
+    sceneManager.togglePause();
   }
   
   pause(): void {
-    this.gamePhase = 'paused';
-    document.getElementById('pauseMenu')?.classList.add('visible');
+    sceneManager.transitionTo('paused');
   }
   
   resume(): void {
-    this.gamePhase = 'playing';
-    document.getElementById('pauseMenu')?.classList.remove('visible');
+    sceneManager.transitionTo('playing');
   }
   
   quit(): void {
     this.stop();
-    this.gamePhase = 'menu';
-    // TODO: Show main menu
+    sceneManager.transitionTo('menu');
   }
   
   // === UTILITY METHODS ===
@@ -704,6 +777,10 @@ export class GameEngine {
   
   getGamePhase(): GamePhase {
     return this.gamePhase;
+  }
+  
+  getPlayerHero(): Hero | null {
+    return this.playerHero;
   }
   
   getFps(): number {

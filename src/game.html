@@ -289,6 +289,201 @@
       background: var(--accent);
       color: var(--bg);
     }
+
+    /* Main Menu Screen */
+    #menuScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--bg) 0%, #1a1f35 50%, var(--bg) 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .menu-title {
+      font-size: 4rem;
+      color: var(--accent);
+      text-shadow: 0 0 30px rgba(110, 231, 183, 0.5);
+      margin-bottom: 10px;
+    }
+
+    .menu-subtitle {
+      font-size: 1.2rem;
+      color: var(--muted);
+      margin-bottom: 50px;
+    }
+
+    .menu-btn-primary {
+      display: block;
+      width: 280px;
+      padding: 18px;
+      margin: 12px auto;
+      background: linear-gradient(135deg, var(--accent), #10b981);
+      border: none;
+      border-radius: 8px;
+      color: var(--bg);
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .menu-btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(110, 231, 183, 0.4);
+    }
+
+    .menu-btn-secondary {
+      display: block;
+      width: 280px;
+      padding: 14px;
+      margin: 10px auto;
+      background: transparent;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .menu-btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Hero Creation Screen */
+    #heroCreationScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #0d1225 0%, var(--bg) 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 40px;
+    }
+
+    .hero-creation-title {
+      font-size: 2.5rem;
+      color: var(--accent);
+      margin-bottom: 30px;
+    }
+
+    .hero-name-section {
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .hero-name-section label {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+
+    #heroNameInput {
+      width: 300px;
+      padding: 12px 16px;
+      font-size: 1.2rem;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      text-align: center;
+    }
+
+    #heroNameInput:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .class-selection {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .class-option {
+      width: 180px;
+      padding: 20px;
+      background: var(--card);
+      border: 3px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .class-option:hover {
+      border-color: var(--muted);
+      transform: translateY(-5px);
+    }
+
+    .class-option.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 25px rgba(110, 231, 183, 0.3);
+      background: linear-gradient(180deg, rgba(110, 231, 183, 0.1) 0%, var(--card) 100%);
+    }
+
+    .class-icon {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    .class-name {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .class-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .class-stats {
+      margin-top: 12px;
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+
+    #confirmHeroBtn {
+      padding: 16px 50px;
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, var(--accent), #10b981);
+      border: none;
+      border-radius: 8px;
+      color: var(--bg);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    #confirmHeroBtn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(110, 231, 183, 0.4);
+    }
+
+    #confirmHeroBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
   </style>
 </head>
 <body>
@@ -305,6 +500,57 @@
         <div class="loading-progress" id="loadingProgress"></div>
       </div>
       <p id="loadingText">Loading assets...</p>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <div id="menuScreen">
+      <h1 class="font-cinzel menu-title">⚔️ Grudge Islands</h1>
+      <p class="menu-subtitle">Conquer the archipelago. Claim your destiny.</p>
+      <button class="menu-btn-primary" id="startGameBtn">🎮 New Game</button>
+      <button class="menu-btn-secondary" id="continueBtn">📂 Continue</button>
+      <button class="menu-btn-secondary" id="mainSettingsBtn">⚙️ Settings</button>
+    </div>
+
+    <!-- Hero Creation Screen -->
+    <div id="heroCreationScreen">
+      <h1 class="font-cinzel hero-creation-title">🛡️ Create Your Hero</h1>
+      
+      <div class="hero-name-section">
+        <label for="heroNameInput">Hero Name</label>
+        <input type="text" id="heroNameInput" placeholder="Enter name..." maxlength="20" value="Grudge Knight">
+      </div>
+
+      <div class="class-selection">
+        <div class="class-option selected" data-class="Warrior">
+          <div class="class-icon">⚔️</div>
+          <div class="class-name">Warrior</div>
+          <div class="class-desc">A stalwart defender who excels in close combat</div>
+          <div class="class-stats">HP: 150 | STR: 15 | Armor: 8</div>
+        </div>
+        
+        <div class="class-option" data-class="Mage">
+          <div class="class-icon">🔮</div>
+          <div class="class-name">Mage</div>
+          <div class="class-desc">A powerful spellcaster with devastating magic</div>
+          <div class="class-stats">HP: 80 | INT: 18 | Mana: 120</div>
+        </div>
+        
+        <div class="class-option" data-class="Ranger">
+          <div class="class-icon">🏹</div>
+          <div class="class-name">Ranger</div>
+          <div class="class-desc">A swift hunter deadly at range</div>
+          <div class="class-stats">HP: 100 | AGI: 16 | Crit: 15%</div>
+        </div>
+        
+        <div class="class-option" data-class="Worg">
+          <div class="class-icon">🐺</div>
+          <div class="class-name">Worg</div>
+          <div class="class-desc">A ferocious beast with immense power</div>
+          <div class="class-stats">HP: 200 | STR: 18 | Speed: 140</div>
+        </div>
+      </div>
+
+      <button id="confirmHeroBtn">⚔️ Begin Adventure</button>
     </div>
 
     <!-- HUD -->
