@@ -3,16 +3,16 @@
 // Handles hero equipment, inventory, and stat bonuses
 // ============================================
 
-import type { DerivedStats, Attributes } from '../../types/index.ts';
+import type { DerivedStats } from '../../types/index.ts';
 import type { 
   Weapon, Armor, Item, EquipmentSlots, Inventory, EquipmentBonuses,
   ArmorSlot
 } from '../../types/equipment.ts';
 import { 
   getEmptyEquipmentSlots, getEmptyInventory, calculateEquipmentBonuses,
-  TIER_COLORS, TIER_NAMES
+  TIER_NAMES
 } from '../../types/equipment.ts';
-import { getWeaponById, getArmorById, getStarterEquipment } from '../../data/itemsData.ts';
+import { getStarterEquipment } from '../../data/itemsData.ts';
 
 export class EquipmentManager {
   private equipmentSlots: EquipmentSlots;

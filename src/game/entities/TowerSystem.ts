@@ -98,7 +98,7 @@ export class TowerManager {
   private getTowerSprite(owner: FactionId, level: number): HTMLImageElement | null {
     // Map faction to sprite key
     let key: string;
-    switch (owner) {
+    switch (owner as number) {
       case 1: key = 'cyan'; break;
       case 2: key = 'red'; break;
       case 3: key = 'lime'; break;
@@ -209,7 +209,6 @@ export class TowerManager {
     if (!this.menuState.placementPosition) return null;
     
     const type = this.menuState.selectedTower;
-    const def = TOWER_DEFINITIONS[type];
     const pos = this.menuState.placementPosition;
     const stats = getTowerStats(type, 1);
     
@@ -604,7 +603,7 @@ export class TowerManager {
     tower: Tower,
     x: number,
     y: number,
-    def: TowerDefinition
+    _def: TowerDefinition
   ): void {
     const factionColor = this.getFactionColor(tower.owner);
     const size = 25 + tower.level * 3;
@@ -747,7 +746,7 @@ export class TowerManager {
   }
   
   private getFactionColor(faction: FactionId): string {
-    switch (faction) {
+    switch (faction as number) {
       case 1: return '#00aaff';
       case 2: return '#ff4444';
       case 3: return '#44ff88';

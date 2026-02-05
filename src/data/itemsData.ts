@@ -4,9 +4,9 @@
 // ============================================
 
 import type { 
-  Weapon, Armor, WeaponStats, ArmorStats,
-  ItemTier, WeaponCategory, WeaponSubCategory, WeaponProfession,
-  ArmorSlot, ArmorType, ArmorProfession, WeaponIngredient
+  Weapon, Armor,
+  ItemTier, WeaponCategory, WeaponProfession,
+  ArmorSlot, ArmorType, ArmorProfession
 } from '../types/equipment.ts';
 
 // === WEAPON DEFINITIONS ===

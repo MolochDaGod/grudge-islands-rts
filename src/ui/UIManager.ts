@@ -3,10 +3,40 @@
 // Comprehensive UI system with tooltips, panels, pop-outs
 // ============================================
 
-import { DerivedStats, Attributes, Entity, Hero, Projectile } from '../types';
-import { calculateDerivedStats } from '../data/attributes';
-import { TINY_SWORDS_UNITS, TinySwordsUnitType, getTinySwordsUnitPath, gameToTinySwordsFaction, TinySwordsFaction } from '../data/miniWorldSprites';
-import { Boat, Building, Island, Camp } from '../types/world';
+import type { FactionId } from '../types';
+import { Boat, Building, Island } from '../types/world';
+
+// Entity interface for UI purposes
+interface Entity {
+  id: string;
+  type: string;
+  faction: FactionId;
+  position: { x: number; y: number };
+  stats?: {
+    physicalDamage: number;
+    physicalDefense: number;
+    movementSpeed: number;
+    attackRange?: number;
+    attackSpeed?: number;
+    armor?: number;
+    criticalChance?: number;
+    maxHealth?: number;
+    maxMana?: number;
+  };
+  health?: number;
+  maxHealth?: number;
+}
+
+// Hero interface for UI purposes
+interface Hero extends Entity {
+  name?: string;
+  level: number;
+  experience: number;
+  experienceToLevel?: number;
+  className: string;
+  currentHealth?: number;
+  currentMana?: number;
+}
 
 // === UI CONFIGURATION ===
 
@@ -140,9 +170,6 @@ export class UIManager {
   private selectedBuilding: Building | null = null;
   private selectedBoat: Boat | null = null;
   private selectedHero: Hero | null = null;
-  
-  // Cached sprite images
-  private spriteCache: Map<string, HTMLImageElement> = new Map();
   
   // Panel visibility
   private panels: {
@@ -350,7 +377,7 @@ export class UIManager {
     }
   }
   
-  private renderHeroPanel(x: number, y: number, w: number, h: number): void {
+  private renderHeroPanel(x: number, y: number, w: number, _h: number): void {
     const hero = this.selectedHero!;
     const padding = 10;
     
@@ -384,7 +411,6 @@ export class UIManager {
     
     // XP bar
     textY += 20;
-    const xpRatio = (hero.experience || 0) / (hero.experienceToLevel || 100);
     drawStatBar(this.ctx, {
       x: textX,
       y: textY,
@@ -433,7 +459,7 @@ export class UIManager {
         { label: 'ATK', value: Math.floor(stats.physicalDamage), color: this.config.colors.damage },
         { label: 'DEF', value: Math.floor(stats.physicalDefense), color: this.config.colors.defense },
         { label: 'SPD', value: stats.movementSpeed.toFixed(1), color: this.config.colors.stamina },
-        { label: 'CRIT', value: `${Math.floor(stats.criticalChance * 100)}%`, color: this.config.colors.accent }
+        { label: 'CRIT', value: `${Math.floor((stats.criticalChance || 0) * 100)}%`, color: this.config.colors.accent }
       ];
       
       const colWidth = (w - padding * 2) / statList.length;
@@ -452,7 +478,7 @@ export class UIManager {
     }
   }
   
-  private renderUnitPanel(x: number, y: number, w: number, h: number): void {
+  private renderUnitPanel(x: number, y: number, w: number, _h: number): void {
     const padding = 10;
     const entities = this.selectedEntities;
     
@@ -493,7 +519,7 @@ export class UIManager {
         y: barY,
         width: w - padding * 2,
         height: 14,
-        value: unit.health,
+        value: unit.health || 0,
         maxValue: unit.maxHealth || 100,
         color: this.config.colors.health
       });
@@ -509,11 +535,11 @@ export class UIManager {
           ],
           [
             { label: 'SPD', value: stats.movementSpeed.toFixed(1), color: this.config.colors.stamina },
-            { label: 'RANGE', value: Math.floor(stats.attackRange), color: this.config.colors.mana }
+            { label: 'RANGE', value: Math.floor(stats.attackRange || 0), color: this.config.colors.mana }
           ],
           [
-            { label: 'AS', value: stats.attackSpeed.toFixed(2), color: this.config.colors.accent },
-            { label: 'ARMOR', value: Math.floor(stats.armor), color: this.config.colors.defense }
+            { label: 'AS', value: (stats.attackSpeed || 1).toFixed(2), color: this.config.colors.accent },
+            { label: 'ARMOR', value: Math.floor(stats.armor || 0), color: this.config.colors.defense }
           ]
         ];
         
@@ -592,7 +618,7 @@ export class UIManager {
     }
   }
   
-  private renderBoatPanel(x: number, y: number, w: number, h: number): void {
+  private renderBoatPanel(x: number, y: number, w: number, _h: number): void {
     const boat = this.selectedBoat!;
     const padding = 10;
     
@@ -600,7 +626,7 @@ export class UIManager {
     this.ctx.fillStyle = 'rgba(40, 60, 80, 0.8)';
     this.ctx.fillRect(x + padding, y + padding, 64, 48);
     
-    this.ctx.fillStyle = this.getFactionColor(boat.faction);
+    this.ctx.fillStyle = this.getFactionColor(boat.owner);
     this.ctx.font = `bold 28px ${this.config.fontFamily}`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -613,12 +639,12 @@ export class UIManager {
     this.ctx.fillStyle = this.config.colors.text;
     this.ctx.font = `bold ${this.config.fontSize.title}px ${this.config.fontFamily}`;
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(`${this.getFactionName(boat.faction)} Boat`, textX, textY);
+    this.ctx.fillText(`${this.getFactionName(boat.owner)} Boat`, textX, textY);
     
     textY += 18;
     this.ctx.fillStyle = this.config.colors.textSecondary;
     this.ctx.font = `${this.config.fontSize.medium}px ${this.config.fontFamily}`;
-    const status = boat.docked ? 'Docked' : 'Sailing';
+    const status = boat.state === 'docked' ? 'Docked' : 'Sailing';
     this.ctx.fillText(`Status: ${status}`, textX, textY);
     
     // Health bar
@@ -644,10 +670,10 @@ export class UIManager {
     this.ctx.fillText(`Speed: ${boat.speed.toFixed(1)}`, x + padding + 120, capacityY);
     
     // Destination
-    if (boat.targetIsland !== undefined) {
+    if (boat.targetDock) {
       const destY = capacityY + 20;
       this.ctx.fillStyle = this.config.colors.accent;
-      this.ctx.fillText(`Destination: Island ${boat.targetIsland}`, x + padding, destY);
+      this.ctx.fillText(`Destination: ${boat.targetDock.islandId}`, x + padding, destY);
     }
     
     // Unit list preview
@@ -659,9 +685,9 @@ export class UIManager {
       
       // Show first few units as icons
       const iconSize = 20;
-      boat.units.slice(0, 8).forEach((unit, i) => {
+      boat.units.slice(0, 8).forEach((_unit, i) => {
         const iconX = x + padding + i * (iconSize + 2);
-        this.ctx.fillStyle = this.getFactionColor(boat.faction);
+        this.ctx.fillStyle = this.getFactionColor(boat.owner);
         this.ctx.globalAlpha = 0.5;
         this.ctx.fillRect(iconX, unitsY + 8, iconSize, iconSize);
         this.ctx.globalAlpha = 1;
@@ -674,7 +700,7 @@ export class UIManager {
     }
   }
   
-  private renderBuildingPanel(x: number, y: number, w: number, h: number): void {
+  private renderBuildingPanel(x: number, y: number, w: number, _h: number): void {
     const building = this.selectedBuilding!;
     const padding = 10;
     
@@ -682,7 +708,7 @@ export class UIManager {
     this.ctx.fillStyle = 'rgba(60, 50, 40, 0.8)';
     this.ctx.fillRect(x + padding, y + padding, 64, 64);
     
-    this.ctx.fillStyle = this.getFactionColor(building.faction);
+    this.ctx.fillStyle = this.getFactionColor(building.owner);
     this.ctx.font = `bold 28px ${this.config.fontFamily}`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -698,9 +724,9 @@ export class UIManager {
     this.ctx.fillText(this.formatBuildingName(building.type), textX, textY);
     
     textY += 18;
-    this.ctx.fillStyle = this.getFactionColor(building.faction);
+    this.ctx.fillStyle = this.getFactionColor(building.owner);
     this.ctx.font = `${this.config.fontSize.medium}px ${this.config.fontFamily}`;
-    this.ctx.fillText(this.getFactionName(building.faction), textX, textY);
+    this.ctx.fillText(this.getFactionName(building.owner), textX, textY);
     
     // Construction progress
     if (building.constructionProgress !== undefined && building.constructionProgress < 1) {
@@ -929,7 +955,7 @@ export class UIManager {
     const stats: TooltipData['stats'] = [];
     
     if (entity.stats) {
-      stats.push({ label: 'Health', value: `${Math.floor(entity.health)}/${Math.floor(entity.maxHealth || 100)}`, color: this.config.colors.health });
+      stats.push({ label: 'Health', value: `${Math.floor(entity.health || 0)}/${Math.floor(entity.maxHealth || 100)}`, color: this.config.colors.health });
       stats.push({ label: 'Attack', value: Math.floor(entity.stats.physicalDamage), color: this.config.colors.damage });
       stats.push({ label: 'Defense', value: Math.floor(entity.stats.physicalDefense), color: this.config.colors.defense });
       stats.push({ label: 'Speed', value: entity.stats.movementSpeed.toFixed(1), color: this.config.colors.stamina });
@@ -947,7 +973,7 @@ export class UIManager {
     return {
       type: 'building',
       title: this.formatBuildingName(building.type),
-      subtitle: this.getFactionName(building.faction),
+      subtitle: this.getFactionName(building.owner),
       stats: [
         { label: 'Health', value: `${Math.floor(building.health)}/${Math.floor(building.maxHealth)}`, color: this.config.colors.health },
         ...this.getBuildingInfo(building.type)
@@ -958,8 +984,8 @@ export class UIManager {
   createBoatTooltip(boat: Boat): TooltipData {
     return {
       type: 'boat',
-      title: `${this.getFactionName(boat.faction)} Boat`,
-      subtitle: boat.docked ? 'Docked' : 'Sailing',
+      title: `${this.getFactionName(boat.owner)} Boat`,
+      subtitle: boat.state === 'docked' ? 'Docked' : 'Sailing',
       stats: [
         { label: 'Health', value: `${Math.floor(boat.health)}/${Math.floor(boat.maxHealth)}`, color: this.config.colors.health },
         { label: 'Troops', value: `${boat.units.length}/${boat.capacity}` },
@@ -972,9 +998,9 @@ export class UIManager {
     return {
       type: 'island',
       title: island.name,
-      subtitle: `Controlled by: ${this.getFactionName(island.controllingFaction)}`,
+      subtitle: `Controlled by: ${this.getFactionName(island.owner)}`,
       stats: [
-        { label: 'Camps', value: island.camps.length },
+        { label: 'Camp', value: island.camp ? 1 : 0 },
         { label: 'Nodes', value: island.nodes.length },
         { label: 'Docks', value: island.dockPoints.length }
       ]

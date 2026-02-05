@@ -23,6 +23,7 @@ export class BoatManager {
     
     const boat: Boat = {
       id: generateId(),
+      model: size === 'small' ? 'speedboat' : size === 'large' ? 'warship' : 'sailboat',
       owner,
       position: { ...dock.position },
       targetPosition: null,
@@ -34,6 +35,11 @@ export class BoatManager {
       units: [],
       health: stats.health,
       maxHealth: stats.health,
+      armor: size === 'small' ? 5 : size === 'large' ? 30 : 10,
+      attackDamage: size === 'small' ? 15 : size === 'large' ? 50 : 20,
+      attackRange: size === 'small' ? 150 : size === 'large' ? 300 : 180,
+      attackCooldown: 0,
+      targetBoatId: null,
       spawnQueue: 0,
       spawnTimer: 0
     };

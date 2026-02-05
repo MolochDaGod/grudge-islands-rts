@@ -3,17 +3,17 @@
 // Handles skill points, unlocking skills, and applying effects
 // ============================================
 
-import type { DerivedStats, Attributes, Position } from '../../types/index.ts';
+import type { DerivedStats, Attributes } from '../../types/index.ts';
 import type { 
   SkillNode, SkillClass, SkillTree, PlayerSkillState, SkillSlot, StatModifier
 } from '../../types/skills.ts';
 import { 
   getEmptyPlayerSkillState, canUnlockSkill, unlockSkillLevel,
   calculatePassiveBonuses, getEmptySkillSlots, assignSkillToSlot,
-  SKILL_CLASS_COLORS, SKILL_TIER_REQUIREMENTS
+  SKILL_TIER_REQUIREMENTS
 } from '../../types/skills.ts';
 import { 
-  ALL_SKILL_TREES, getAllSkills, getSkillById, getActiveSkills
+  ALL_SKILL_TREES, getAllSkills
 } from '../../data/skillTreeData.ts';
 
 export class SkillTreeManager {
@@ -357,7 +357,7 @@ export class SkillTreeManager {
     const refund = this.playerState.pointsPerTree[skillClass];
     
     // Remove skills from this tree
-    for (const [skillId, level] of [...this.playerState.unlockedSkills]) {
+    for (const [skillId, _level] of [...this.playerState.unlockedSkills]) {
       const skill = this.allSkills.get(skillId);
       if (skill && skill.skillClass === skillClass) {
         this.playerState.unlockedSkills.delete(skillId);

@@ -3,7 +3,7 @@
 // Panel for displaying tower information and upgrades
 // ============================================
 
-import type { Tower, TowerType, TowerDefinition } from '../types/world.ts';
+import type { Tower, TowerType } from '../types/world.ts';
 import { TOWER_DEFINITIONS, getTowerStats, getTowerUpgradeCost } from '../types/world.ts';
 
 export interface TowerUIState {

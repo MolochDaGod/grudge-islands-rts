@@ -395,7 +395,7 @@ export class GameEngine {
         enemies.push({
           id: entity.id,
           position: entity.position,
-          health: entity.health || 100
+          health: (entity as any).health || 100
         });
       }
     }

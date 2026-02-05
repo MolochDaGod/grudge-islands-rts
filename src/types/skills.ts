@@ -163,7 +163,7 @@ export function getEmptyPlayerSkillState(): PlayerSkillState {
 export function canUnlockSkill(
   skill: SkillNode,
   playerState: PlayerSkillState,
-  allSkills: Map<string, SkillNode>
+  _allSkills: Map<string, SkillNode>
 ): boolean {
   // Check if player has available points
   if (playerState.availablePoints < skill.pointCost) {
