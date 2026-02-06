@@ -92,6 +92,19 @@ export class GameEngine {
   private enemyNodesEl!: HTMLElement;
   private goldCountEl!: HTMLElement;
   
+  // Hero panel elements
+  private heroPanel!: HTMLElement;
+  private heroNameEl!: HTMLElement;
+  private heroLevelEl!: HTMLElement;
+  private heroClassEl!: HTMLElement;
+  private heroHpText!: HTMLElement;
+  private heroHpBar!: HTMLElement;
+  private heroManaText!: HTMLElement;
+  private heroManaBar!: HTMLElement;
+  private heroXpText!: HTMLElement;
+  private heroXpBar!: HTMLElement;
+  private heroIcon!: HTMLElement;
+  
   constructor() {
     // Constructor intentionally empty - init() does the work
   }
@@ -110,6 +123,19 @@ export class GameEngine {
     this.playerNodesEl = document.getElementById('playerNodes')!;
     this.enemyNodesEl = document.getElementById('enemyNodes')!;
     this.goldCountEl = document.getElementById('goldCount')!;
+    
+    // Hero panel elements
+    this.heroPanel = document.getElementById('heroPanel')!;
+    this.heroNameEl = document.getElementById('heroName')!;
+    this.heroLevelEl = document.getElementById('heroLevel')!;
+    this.heroClassEl = document.getElementById('heroClass')!;
+    this.heroHpText = document.getElementById('heroHpText')!;
+    this.heroHpBar = document.getElementById('heroHpBar')!;
+    this.heroManaText = document.getElementById('heroManaText')!;
+    this.heroManaBar = document.getElementById('heroManaBar')!;
+    this.heroXpText = document.getElementById('heroXpText')!;
+    this.heroXpBar = document.getElementById('heroXpBar')!;
+    this.heroIcon = document.getElementById('heroIcon')!;
     
     // Get canvas elements
     this.bgCanvas = document.getElementById('bgCanvas') as HTMLCanvasElement;
@@ -240,11 +266,19 @@ export class GameEngine {
     // Initialize scene manager
     sceneManager.init();
     
+    // Store pending hero data for when game starts
+    let pendingHeroData: HeroCreationData | null = null;
+    
     // Setup scene change callback
     sceneManager.onSceneChange = (from, to) => {
       console.log(`Scene transition: ${from} -> ${to}`);
       if (to === 'playing') {
         this.gamePhase = 'playing';
+        // Setup game state when transitioning to playing (if not already done)
+        if (pendingHeroData && !this.playerHero) {
+          this.setupInitialState(pendingHeroData);
+          pendingHeroData = null;
+        }
       } else if (to === 'paused') {
         this.gamePhase = 'paused';
       } else if (to === 'menu') {
@@ -252,10 +286,10 @@ export class GameEngine {
       }
     };
     
-    // Setup hero creation callback
+    // Setup hero creation callback - just store data, don't setup yet
     sceneManager.onHeroCreated = (heroData: HeroCreationData) => {
       console.log('Hero created:', heroData);
-      this.setupInitialState(heroData);
+      pendingHeroData = heroData;
     };
     
     // Transition to main menu
@@ -625,15 +659,20 @@ export class GameEngine {
     // Update player hero
     if (this.playerHero && !this.playerHero.isDead()) {
       this.playerHero.update(deltaTime);
+      // Sync hero position to collision and aggro systems
+      this.collisionSystem.updatePosition(this.playerHero.id, this.playerHero.position);
+      this.aggroSystem.updatePosition(this.playerHero.id, this.playerHero.position);
     }
     
     // Update movement system
     const updatedPositions = this.movementSystem.update(deltaTime);
     
-    // Sync positions with entity system
+    // Sync positions with entity system and aggro system
     for (const [id, pos] of updatedPositions) {
       this.entitySystem.updateEntityPosition(id, pos);
       this.aiController.updateUnitPosition(id, pos);
+      this.collisionSystem.updatePosition(id, pos);
+      this.aggroSystem.updatePosition(id, pos);
     }
     
     // Update AI controller (for enemy units)
@@ -736,7 +775,8 @@ export class GameEngine {
       this.boatManager,
       this.buildingManager,
       this.towerManager,
-      this.effectsManager
+      this.effectsManager,
+      this.playerHero
     );
     
     // Render tower UI elements on UI canvas (no world transform needed)
@@ -784,6 +824,46 @@ export class GameEngine {
     
     // Update tower UI with current gold
     this.towerUI.updatePlayerGold(Math.floor(this.playerGold));
+    
+    // Update hero panel
+    if (this.playerHero) {
+      this.heroPanel.classList.remove('hidden');
+      
+      const stats = this.playerHero.stats;
+      const level = this.playerHero.level;
+      
+      this.heroNameEl.textContent = this.playerHero.heroName;
+      this.heroLevelEl.textContent = level.toString();
+      this.heroClassEl.textContent = this.playerHero.heroClass;
+      
+      // Health bar
+      const hpPercent = (stats.health / stats.maxHealth) * 100;
+      this.heroHpText.textContent = `${Math.floor(stats.health)}/${stats.maxHealth}`;
+      this.heroHpBar.style.width = `${hpPercent}%`;
+      
+      // Mana bar
+      const manaPercent = (stats.mana / stats.maxMana) * 100;
+      this.heroManaText.textContent = `${Math.floor(stats.mana)}/${stats.maxMana}`;
+      this.heroManaBar.style.width = `${manaPercent}%`;
+      
+      // XP bar
+      const xp = this.playerHero.experience;
+      const xpToNext = this.playerHero.experienceToLevel;
+      const xpPercent = (xp / xpToNext) * 100;
+      this.heroXpText.textContent = `${xp}/${xpToNext}`;
+      this.heroXpBar.style.width = `${xpPercent}%`;
+      
+      // Class icon
+      const classIcons: Record<string, string> = {
+        'Warrior': '⚔️',
+        'Mage': '🔮',
+        'Ranger': '🏹',
+        'Worg': '🐺'
+      };
+      this.heroIcon.textContent = classIcons[this.playerHero.heroClass] || '⚔️';
+    } else {
+      this.heroPanel.classList.add('hidden');
+    }
   }
   
   // === INPUT HANDLERS ===
@@ -886,6 +966,14 @@ export class GameEngine {
       case 'd':
       case 'arrowright':
         this.renderer.panCamera(20, 0);
+        break;
+      case 'f1':
+        // Quick start for development - skip menus
+        if (this.gamePhase !== 'playing') {
+          console.log('Quick start - skipping to gameplay');
+          sceneManager.quickStart('Warrior', 'pveEasy');
+        }
+        e.preventDefault();
         break;
     }
   }

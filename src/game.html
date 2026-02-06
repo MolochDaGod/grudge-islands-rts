@@ -153,6 +153,88 @@
       border-radius: 4px;
     }
 
+    /* Hero Info Panel */
+    #heroPanel {
+      position: absolute;
+      top: 50px;
+      left: 20px;
+      background: rgba(20,26,43,0.95);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 15px;
+      min-width: 180px;
+      z-index: 10;
+    }
+
+    #heroPanel.hidden { display: none; }
+
+    .hero-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .hero-panel-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .hero-panel-name {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .hero-panel-level {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .hero-bar {
+      height: 8px;
+      background: var(--card);
+      border-radius: 4px;
+      margin: 4px 0;
+      overflow: hidden;
+    }
+
+    .hero-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.2s;
+    }
+
+    .hero-bar-fill.health {
+      background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+
+    .hero-bar-fill.mana {
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    .hero-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .hero-xp-bar {
+      height: 4px;
+      margin-top: 6px;
+    }
+
+    .hero-bar-fill.xp {
+      background: linear-gradient(90deg, #fbbf24, #fcd34d);
+    }
+
     /* Minimap */
     #minimap {
       position: absolute;
@@ -577,8 +659,26 @@
         <div class="hotkey-hints">
           <span class="hotkey-hint">[T] Towers</span>
           <span class="hotkey-hint">[B] Buildings</span>
+          <span class="hotkey-hint">[F1] Quick Start</span>
         </div>
         <div id="fpsCounter">FPS: 60</div>
+      </div>
+
+      <!-- Hero Info Panel -->
+      <div id="heroPanel" class="hidden">
+        <div class="hero-panel-header">
+          <div class="hero-panel-icon" id="heroIcon">⚔️</div>
+          <div>
+            <div class="hero-panel-name" id="heroName">Hero</div>
+            <div class="hero-panel-level">Level <span id="heroLevel">1</span> <span id="heroClass">Warrior</span></div>
+          </div>
+        </div>
+        <div class="hero-bar-label"><span>HP</span><span id="heroHpText">100/100</span></div>
+        <div class="hero-bar"><div class="hero-bar-fill health" id="heroHpBar" style="width: 100%;"></div></div>
+        <div class="hero-bar-label"><span>Mana</span><span id="heroManaText">50/50</span></div>
+        <div class="hero-bar"><div class="hero-bar-fill mana" id="heroManaBar" style="width: 100%;"></div></div>
+        <div class="hero-bar-label"><span>XP</span><span id="heroXpText">0/100</span></div>
+        <div class="hero-bar hero-xp-bar"><div class="hero-bar-fill xp" id="heroXpBar" style="width: 0%;"></div></div>
       </div>
     </div>
 

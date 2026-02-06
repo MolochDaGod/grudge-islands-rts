@@ -11,6 +11,7 @@ import type { BoatManager } from '../entities/Boat.ts';
 import type { BuildingManager } from '../entities/Building.ts';
 import type { TowerManager } from '../entities/TowerSystem.ts';
 import type { EffectsManager } from '../systems/EffectsManager.ts';
+import type { Hero } from '../entities/Hero.ts';
 import { WORLD_CONFIG } from '../world/WorldGenerator.ts';
 
 // Faction colors
@@ -246,7 +247,8 @@ export class Renderer {
     boatManager: BoatManager,
     buildingManager: BuildingManager,
     towerManager?: TowerManager,
-    effectsManager?: EffectsManager
+    effectsManager?: EffectsManager,
+    hero?: Hero | null
   ): void {
     // Clear canvases
     this.bgCtx.clearRect(0, 0, this.screenWidth, this.screenHeight);
@@ -297,6 +299,11 @@ export class Renderer {
     
     // Render entities (units)
     this.renderEntities(deltaTime, gameTime);
+    
+    // Render hero (if exists and alive)
+    if (hero && !hero.isDead()) {
+      this.renderHero(hero, gameTime);
+    }
     
     // Render effects and projectiles (camera offset NOT needed - canvas transform handles it)
     if (effectsManager) {
@@ -468,6 +475,101 @@ export class Renderer {
       ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
       ctx.fillStyle = '#fff';
       ctx.fill();
+    }
+  }
+  
+  private renderHero(hero: Hero, gameTime: number): void {
+    const ctx = this.fgCtx;
+    const x = hero.position.x;
+    const y = hero.position.y;
+    const size = 24; // Hero is larger than regular units
+    
+    // Hero glow effect
+    const glowIntensity = 0.3 + Math.sin(gameTime * 3) * 0.1;
+    ctx.shadowColor = '#6ee7b7';
+    ctx.shadowBlur = 15;
+    
+    // Selection circle (hero is always "selected")
+    ctx.beginPath();
+    ctx.arc(x, y, size + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(110, 231, 183, ${glowIntensity})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Hero body - class-colored
+    const classColors: Record<string, string> = {
+      Warrior: '#4a90d9',
+      Mage: '#9b59b6',
+      Ranger: '#27ae60',
+      Worg: '#8b4513'
+    };
+    const bodyColor = classColors[hero.heroClass] || '#4a90d9';
+    
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = bodyColor;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Class icon in center
+    const classIcons: Record<string, string> = {
+      Warrior: '⚔️',
+      Mage: '🔮',
+      Ranger: '🏹',
+      Worg: '🐺'
+    };
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(classIcons[hero.heroClass] || '⚔️', x, y);
+    
+    // Health bar above hero
+    const barWidth = 50;
+    const barHeight = 6;
+    const healthPercent = hero.stats.health / hero.stats.maxHealth;
+    
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x - barWidth / 2, y - size - 15, barWidth, barHeight);
+    
+    ctx.fillStyle = healthPercent > 0.5 ? '#4ade80' : healthPercent > 0.25 ? '#fbbf24' : '#ef4444';
+    ctx.fillRect(x - barWidth / 2, y - size - 15, barWidth * healthPercent, barHeight);
+    
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - barWidth / 2, y - size - 15, barWidth, barHeight);
+    
+    // Mana bar (smaller, below health)
+    const manaPercent = hero.stats.mana / hero.stats.maxMana;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x - barWidth / 2, y - size - 8, barWidth, 4);
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(x - barWidth / 2, y - size - 8, barWidth * manaPercent, 4);
+    
+    // Hero name and level
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${hero.heroName} Lv.${hero.level}`, x, y + size + 15);
+    
+    // Move target indicator
+    if (hero.moveTarget && hero.isMoving) {
+      ctx.strokeStyle = 'rgba(110, 231, 183, 0.5)';
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(hero.moveTarget.x, hero.moveTarget.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Target marker
+      ctx.beginPath();
+      ctx.arc(hero.moveTarget.x, hero.moveTarget.y, 8, 0, Math.PI * 2);
+      ctx.strokeStyle = '#6ee7b7';
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
   }
   
