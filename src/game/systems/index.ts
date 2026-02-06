@@ -44,3 +44,12 @@ export {
   type PathResult,
   type PathfindingConfig
 } from './Pathfinding.ts';
+
+// Audio Manager
+export {
+  AudioManager,
+  audioManager,
+  SOUND_DEFINITIONS,
+  type SoundCategory,
+  type SoundDefinition
+} from './AudioManager.ts';
