@@ -5,8 +5,8 @@
 
 import type { AnimationState, SpriteDefinition, UnitTypeName } from '../types/index.ts';
 
-// Base path to sprite assets (relative to project root)
-export const SPRITE_BASE_PATH = '../uuidsprites/dist/sprites/characters';
+// Base path to sprite assets (relative to src/dist/ where game.html is served)
+export const SPRITE_BASE_PATH = '../../uuidsprites/dist/sprites/characters';
 
 // Animation state configurations
 const ANIMATION_CONFIGS: Record<AnimationState, { frameDuration: number; loop: boolean }> = {

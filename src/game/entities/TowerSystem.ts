@@ -73,14 +73,14 @@ export class TowerManager {
   }
   
   private async loadSprites(): Promise<void> {
-    // Load tower sprites for each faction color
+    // Load tower sprites for each faction color (paths relative to src/dist/)
     const towerPaths = [
-      { key: 'cyan', path: '../addons/MiniWorldSprites/Buildings/Cyan/CyanTower.png' },
-      { key: 'lime', path: '../addons/MiniWorldSprites/Buildings/Lime/LimeTower.png' },
-      { key: 'purple', path: '../addons/MiniWorldSprites/Buildings/Purple/PurpleTower.png' },
-      { key: 'red', path: '../addons/MiniWorldSprites/Buildings/Red/RedTower.png' },
-      { key: 'wood', path: '../addons/MiniWorldSprites/Buildings/Wood/Tower.png' },
-      { key: 'wood2', path: '../addons/MiniWorldSprites/Buildings/Wood/Tower2.png' }
+      { key: 'cyan', path: '../../addons/MiniWorldSprites/Buildings/Cyan/CyanTower.png' },
+      { key: 'lime', path: '../../addons/MiniWorldSprites/Buildings/Lime/LimeTower.png' },
+      { key: 'purple', path: '../../addons/MiniWorldSprites/Buildings/Purple/PurpleTower.png' },
+      { key: 'red', path: '../../addons/MiniWorldSprites/Buildings/Red/RedTower.png' },
+      { key: 'wood', path: '../../addons/MiniWorldSprites/Buildings/Wood/Tower.png' },
+      { key: 'wood2', path: '../../addons/MiniWorldSprites/Buildings/Wood/Tower2.png' }
     ];
     
     for (const { key, path } of towerPaths) {
