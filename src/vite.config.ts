@@ -22,9 +22,24 @@ export default defineConfig({
           dest: 'sprites/tiny-swords'
         },
         {
-          // MiniWorld sprites
+          // Tiny Swords sprite pack - Buildings folder
+          src: '../Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/2DAssets/Buildings',
+          dest: 'sprites/tiny-swords'
+        },
+        {
+          // MiniWorld sprites - Characters
           src: '../addons/MiniWorldSprites/Characters',
           dest: 'sprites/miniworld'
+        },
+        {
+          // MiniWorld sprites - Buildings
+          src: '../addons/MiniWorldSprites/Buildings',
+          dest: 'sprites/miniworld'
+        },
+        {
+          // Hero sprites from uuidsprites (GIF animations)
+          src: '../uuidsprites/dist/2draces',
+          dest: 'sprites/heroes'
         }
       ]
     })
