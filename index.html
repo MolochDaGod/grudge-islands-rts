@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grudge Islands RTS</title>
+  <meta name="description" content="MMO-like RTS with island conquest and the Grudge Warlords stat system">
+  <meta name="author" content="Grudge Studios">
+  
+  <!-- Puter.js SDK -->
+  <script src="https://js.puter.com/v2/"></script>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #141a2b;
+      --text: #e8eaf6;
+      --muted: #a5b4d0;
+      --border: #2a3150;
+      --accent: #6ee7b7;
+      --danger: #ef4444;
+      --player-blue: #0066FF;
+      --goblin-red: #FF0000;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Jost', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .font-cinzel { font-family: 'Cinzel', serif; }
+
+    /* Splash/Launcher Screen */
+    #launcherScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0b1020 0%, #1a2040 50%, #0b1020 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .launcher-title {
+      font-size: 4rem;
+      color: var(--accent);
+      text-shadow: 0 0 40px rgba(110, 231, 183, 0.6);
+      margin-bottom: 20px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { text-shadow: 0 0 40px rgba(110, 231, 183, 0.6); }
+      50% { text-shadow: 0 0 60px rgba(110, 231, 183, 0.9); }
+    }
+
+    .launcher-subtitle {
+      font-size: 1.5rem;
+      color: var(--muted);
+      margin-bottom: 60px;
+    }
+
+    .launch-btn {
+      padding: 20px 60px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), #10b981);
+      border: none;
+      border-radius: 12px;
+      color: var(--bg);
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(110, 231, 183, 0.3);
+    }
+
+    .launch-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 30px rgba(110, 231, 183, 0.5);
+    }
+
+    .launch-btn:active {
+      transform: scale(1.02);
+    }
+
+    .puter-badge {
+      position: absolute;
+      bottom: 30px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .puter-badge a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .puter-badge a:hover {
+      text-decoration: underline;
+    }
+
+    /* Game iframe container */
+    #gameFrame {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+      z-index: 500;
+    }
+
+    /* Loading indicator */
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-top: 30px;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading .loading-spinner {
+      display: block;
+    }
+
+    .loading .launch-btn {
+      display: none;
+    }
+
+    /* Version info */
+    .version-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Launcher Screen -->
+  <div id="launcherScreen">
+    <div class="version-info">v0.1.0</div>
+    
+    <h1 class="font-cinzel launcher-title">⚔️ Grudge Islands</h1>
+    <p class="launcher-subtitle">Conquer the Archipelago. Claim Your Destiny.</p>
+    
+    <button class="launch-btn" id="launchBtn" onclick="launchGame()">
+      🎮 Launch Game
+    </button>
+    
+    <div class="loading-spinner" id="loadingSpinner"></div>
+    
+    <div class="puter-badge">
+      Powered by <a href="https://puter.com" target="_blank">Puter</a>
+    </div>
+  </div>
+
+  <!-- Game will load here -->
+  <iframe id="gameFrame" src=""></iframe>
+
+  <script>
+    // Puter.js initialization
+    let puterReady = false;
+    
+    // Check if running on Puter
+    if (typeof puter !== 'undefined') {
+      puter.ui.onReady(() => {
+        puterReady = true;
+        console.log('Puter.js ready!');
+        
+        // Set app title
+        if (puter.ui.setWindowTitle) {
+          puter.ui.setWindowTitle('Grudge Islands RTS');
+        }
+      });
+    }
+
+    async function launchGame() {
+      const launcher = document.getElementById('launcherScreen');
+      const gameFrame = document.getElementById('gameFrame');
+      const launchBtn = document.getElementById('launchBtn');
+      const spinner = document.getElementById('loadingSpinner');
+      
+      // Show loading state
+      launchBtn.style.display = 'none';
+      spinner.style.display = 'block';
+      
+      try {
+        // Small delay for effect
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Load the game
+        gameFrame.src = 'src/dist/game.html';
+        
+        // Wait for iframe to load
+        gameFrame.onload = () => {
+          // Hide launcher, show game
+          launcher.style.display = 'none';
+          gameFrame.style.display = 'block';
+          
+          // Focus the iframe for keyboard input
+          gameFrame.focus();
+          
+          console.log('Game loaded successfully!');
+        };
+        
+        gameFrame.onerror = () => {
+          throw new Error('Failed to load game');
+        };
+        
+      } catch (error) {
+        console.error('Error launching game:', error);
+        
+        // Show error state
+        launchBtn.textContent = '❌ Error - Retry';
+        launchBtn.style.display = 'block';
+        spinner.style.display = 'none';
+        
+        launchBtn.onclick = () => {
+          launchBtn.textContent = '🎮 Launch Game';
+          launchGame();
+        };
+      }
+    }
+
+    // Auto-launch if URL has ?autostart
+    if (window.location.search.includes('autostart')) {
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(launchGame, 100);
+      });
+    }
+
+    // Handle keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Enter to launch game from launcher screen
+      if (e.key === 'Enter' && document.getElementById('launcherScreen').style.display !== 'none') {
+        launchGame();
+      }
+    });
+
+    // Handle fullscreen for Puter
+    function toggleFullscreen() {
+      if (typeof puter !== 'undefined' && puter.ui.setWindowFullscreen) {
+        puter.ui.setWindowFullscreen(true);
+      } else if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      }
+    }
+  </script>
+</body>
+</html>

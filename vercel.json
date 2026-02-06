@@ -1,10 +1,10 @@
 {
   "framework": "vite",
   "buildCommand": "cd src && npm install && npm run build",
-  "outputDirectory": "src/dist",
+  "outputDirectory": ".",
   "installCommand": "cd src && npm install",
   "devCommand": "cd src && npm run dev",
   "rewrites": [
-    { "source": "/", "destination": "/game.html" }
+    { "source": "/game", "destination": "/src/dist/game.html" }
   ]
 }

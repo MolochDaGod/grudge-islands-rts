@@ -1,0 +1,28 @@
+{
+  "name": "grudge-islands-rts",
+  "title": "Grudge Islands RTS",
+  "description": "MMO-like RTS with island conquest and the Grudge Warlords stat system",
+  "version": "0.1.0",
+  "author": "Grudge Studios",
+  "icon": "⚔️",
+  "index": "index.html",
+  "background": "#0b1020",
+  "window": {
+    "width": 1280,
+    "height": 720,
+    "resizable": true,
+    "maximizable": true,
+    "fullscreenable": true
+  },
+  "permissions": [
+    "storage",
+    "ui"
+  ],
+  "keywords": [
+    "rts",
+    "strategy",
+    "game",
+    "islands",
+    "conquest"
+  ]
+}
