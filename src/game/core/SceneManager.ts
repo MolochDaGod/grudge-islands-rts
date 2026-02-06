@@ -3,7 +3,7 @@
 // Handles game states: Menu, Hero Creation, Playing, Paused
 // ============================================
 
-export type GameScene = 'loading' | 'menu' | 'heroCreation' | 'playing' | 'paused' | 'victory' | 'defeat';
+export type GameScene = 'loading' | 'menu' | 'heroCreation' | 'playing' | 'paused' | 'homeIsland' | 'victory' | 'defeat';
 
 export interface HeroCreationData {
   name: string;
@@ -118,6 +118,11 @@ export class SceneManager {
         
       case 'paused':
         this.showElement(this.pauseMenu);
+        this.showElement(this.gameHUD);
+        break;
+        
+      case 'homeIsland':
+        // Home island uses same HUD but different gameplay
         this.showElement(this.gameHUD);
         break;
     }
