@@ -353,4 +353,42 @@ export class EquipmentManager {
       gold: this.inventory.gold,
     };
   }
+  
+  /**
+   * Convert to JSON for cloud persistence
+   * Returns simple key-value of slot -> item ID
+   */
+  toJSON(): Record<string, string> {
+    const result: Record<string, string> = {};
+    
+    if (this.equipmentSlots.mainHand?.id) result.mainHand = this.equipmentSlots.mainHand.id;
+    if (this.equipmentSlots.offHand?.id) result.offHand = this.equipmentSlots.offHand.id;
+    if (this.equipmentSlots.head?.id) result.head = this.equipmentSlots.head.id;
+    if (this.equipmentSlots.chest?.id) result.chest = this.equipmentSlots.chest.id;
+    if (this.equipmentSlots.legs?.id) result.legs = this.equipmentSlots.legs.id;
+    if (this.equipmentSlots.feet?.id) result.feet = this.equipmentSlots.feet.id;
+    if (this.equipmentSlots.hands?.id) result.hands = this.equipmentSlots.hands.id;
+    if (this.equipmentSlots.shoulders?.id) result.shoulders = this.equipmentSlots.shoulders.id;
+    
+    // Include gold
+    result._gold = String(this.inventory.gold);
+    
+    return result;
+  }
+  
+  /**
+   * Restore equipment from JSON
+   * Note: Actual items need to be looked up from item database
+   * This just stores the IDs for now
+   */
+  fromJSON(data: Record<string, string>): void {
+    // Restore gold if present
+    if (data._gold) {
+      this.inventory.gold = parseInt(data._gold, 10) || 0;
+    }
+    
+    // TODO: Look up actual items from item database by ID
+    // For now, we preserve the slot data for later resolution
+    // Items will be re-equipped when item database is available
+  }
 }
