@@ -3,9 +3,9 @@
 // Dual-canvas rendering with camera, zoom, selection
 // ============================================
 
-import type { Position } from '../../types/index.ts';
+import type { Position, FactionId } from '../../types/index.ts';
 import { GridSystem, EntitySystem } from '../core/GridSystem.ts';
-// import { spriteManager } from './SpriteManager.ts';
+import { spriteRenderer, type UnitAnimState } from './TinySwordsSprites.ts';
 import type { TerrainRenderer } from './TerrainRenderer.ts';
 import type { BoatManager } from '../entities/Boat.ts';
 import type { BuildingManager } from '../entities/Building.ts';
@@ -426,7 +426,7 @@ export class Renderer {
     ctx.restore();
   }
   
-  private renderEntities(_deltaTime: number, _gameTime: number): void {
+  private renderEntities(deltaTime: number, _gameTime: number): void {
     const ctx = this.fgCtx;
     
     // Get visible area
@@ -437,46 +437,87 @@ export class Renderer {
     
     // Query entities in view
     const visibleEntities = this.entitySystem.getEntitiesInRect(
-      viewX - 50, viewY - 50,
-      viewW + 100, viewH + 100
+      viewX - 100, viewY - 100,
+      viewW + 200, viewH + 200
     );
     
     // Sort by Y for depth ordering
     visibleEntities.sort((a, b) => a.position.y - b.position.y);
+    
+    const deltaMs = deltaTime * 1000;
     
     for (const entity of visibleEntities) {
       const x = entity.position.x;
       const y = entity.position.y;
       const size = entity.size;
       const isSelected = this.selectedEntityIds.has(entity.id);
+      const faction = entity.faction as FactionId;
+      
+      // Determine sprite config key based on faction
+      // Faction 1 = player (crusade warriors), Faction 2 = enemy (goblin warriors)
+      const configKey = faction === 1 ? 'crusade_warrior' : 'goblin_warrior';
+      
+      // Get or create animator for this entity
+      const animator = spriteRenderer.getOrCreateAnimator(entity.id, configKey);
+      
+      // Determine animation state based on entity movement
+      const prevPos = this.entityPrevPositions.get(entity.id);
+      const isMoving = prevPos && (Math.abs(x - prevPos.x) > 0.1 || Math.abs(y - prevPos.y) > 0.1);
+      this.entityPrevPositions.set(entity.id, { x, y });
+      
+      // Set facing based on movement direction
+      if (prevPos && x !== prevPos.x) {
+        animator.setFacing(x < prevPos.x);
+      }
+      
+      // Update animation state
+      const animState: UnitAnimState = isMoving ? 'run' : 'idle';
+      animator.setState(animState);
+      animator.update(deltaMs);
       
       // Draw selection circle
       if (isSelected) {
         ctx.beginPath();
-        ctx.arc(x, y, size + 4, 0, Math.PI * 2);
+        ctx.arc(x, y, 40, 0, Math.PI * 2);
         ctx.strokeStyle = '#00FF00';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.stroke();
       }
       
-      // Draw entity as colored circle (placeholder for sprites)
-      const color = FACTION_COLORS[entity.faction] || FACTION_COLORS[0];
+      // Try to render sprite, fallback to colored circle
+      const rendered = spriteRenderer.renderTinySwords(ctx, entity.id, x, y, 0.4, faction);
       
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      if (!rendered) {
+        // Fallback to colored circle
+        const color = FACTION_COLORS[faction] || FACTION_COLORS[0];
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Draw faction indicator
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = faction === 1 ? '#0066FF' : '#FF0000';
+        ctx.fill();
+      }
       
-      // Draw faction indicator
-      ctx.beginPath();
-      ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
+      // Draw health bar above unit
+      const healthPercent = 1.0; // TODO: Get actual health
+      const barWidth = 30;
+      const barHeight = 4;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(x - barWidth / 2, y - 45, barWidth, barHeight);
+      ctx.fillStyle = faction === 1 ? '#4ade80' : '#ef4444';
+      ctx.fillRect(x - barWidth / 2, y - 45, barWidth * healthPercent, barHeight);
     }
   }
+  
+  // Track previous positions for movement detection
+  private entityPrevPositions: Map<string, Position> = new Map();
   
   private renderHero(hero: Hero, gameTime: number): void {
     const ctx = this.fgCtx;

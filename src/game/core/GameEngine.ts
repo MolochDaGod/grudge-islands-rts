@@ -7,7 +7,7 @@ import type { GamePhase, FactionId, Position } from '../../types/index.ts';
 import type { BuildingType, TowerType } from '../../types/world.ts';
 import { TOWER_DEFINITIONS, getTowerUpgradeCost } from '../../types/world.ts';
 import { GridSystem, EntitySystem, GRID_SIZE, GAME_SPEED_MULTIPLIER, generateId } from './GridSystem.ts';
-import { spriteManager } from '../rendering/SpriteManager.ts';
+import { spriteRenderer } from '../rendering/TinySwordsSprites.ts';
 import { Renderer } from '../rendering/Renderer.ts';
 import { TerrainRenderer } from '../rendering/TerrainRenderer.ts';
 import { WorldGenerator, WORLD_CONFIG } from '../world/WorldGenerator.ts';
@@ -15,7 +15,7 @@ import { BoatManager } from '../entities/Boat.ts';
 import { BuildingManager } from '../entities/Building.ts';
 import { TowerManager } from '../entities/TowerSystem.ts';
 import { TowerUI } from '../../ui/TowerUI.ts';
-import { getAllUnitTypes } from '../../data/unitTypes.ts';
+// import { getAllUnitTypes } from '../../data/unitTypes.ts';
 import { sceneManager, HeroCreationData } from './SceneManager.ts';
 import { Hero } from '../entities/Hero.ts';
 import { UnitMovementSystem } from '../systems/UnitMovement.ts';
@@ -302,24 +302,26 @@ export class GameEngine {
   }
   
   /**
-   * Load all required sprites
+   * Load all required sprites (Tiny Swords + MiniWorld)
    */
   private async loadSprites(): Promise<void> {
-    const unitTypes = getAllUnitTypes();
-    const totalUnits = unitTypes.length;
-    let loaded = 0;
+    this.updateLoadingState('Loading Tiny Swords sprites...', 25);
     
-    for (const unitType of unitTypes) {
-      this.updateLoadingState(`Loading ${unitType} sprites...`, 20 + (loaded / totalUnits) * 70);
-      
-      try {
-        await spriteManager.preloadUnitSprites(unitType);
-      } catch (error) {
-        console.warn(`Failed to load sprites for ${unitType}:`, error);
-      }
-      
-      loaded++;
+    try {
+      await spriteRenderer.preloadTinySwords();
+    } catch (error) {
+      console.warn('Failed to load Tiny Swords sprites:', error);
     }
+    
+    this.updateLoadingState('Loading MiniWorld sprites...', 60);
+    
+    try {
+      await spriteRenderer.preloadMiniWorld();
+    } catch (error) {
+      console.warn('Failed to load MiniWorld sprites:', error);
+    }
+    
+    this.updateLoadingState('Sprites loaded!', 90);
   }
   
   /**
