@@ -4,7 +4,7 @@
 // ============================================
 
 import type { Position, FactionId } from '../../types/index.ts';
-import { CollisionSystem, CollisionLayer, type Collider } from './CollisionSystem.ts';
+import { CollisionSystem, CollisionLayer } from './CollisionSystem.ts';
 
 // === AGGRO ENTITY TYPES ===
 
@@ -214,7 +214,7 @@ export class AggroSystem {
 
   // === AGGRO LOGIC ===
 
-  update(deltaTime: number): AttackEvent[] {
+  update(_deltaTime: number): AttackEvent[] {
     const attacks: AttackEvent[] = [];
     const currentTime = performance.now();
 
@@ -457,7 +457,7 @@ export class AggroSystem {
     return event;
   }
 
-  private calculateDamage(attacker: AggroEntity, target: AggroEntity): number {
+  private calculateDamage(attacker: AggroEntity, _target: AggroEntity): number {
     // Base damage with small variance
     const variance = 0.9 + Math.random() * 0.2;
     return Math.floor(attacker.attackDamage * variance);

@@ -177,12 +177,6 @@ export class CollisionSystem {
 
   // === SPATIAL GRID ===
 
-  private getCellKey(x: number, y: number): string {
-    const cellX = Math.floor(x / this.cellSize);
-    const cellY = Math.floor(y / this.cellSize);
-    return `${cellX},${cellY}`;
-  }
-
   private getColliderCells(collider: Collider): string[] {
     const cells: string[] = [];
     let minX: number, maxX: number, minY: number, maxY: number;

@@ -4,8 +4,8 @@
 // ============================================
 
 import type { Position } from '../../types/index.ts';
-import type { WorldGrid, TerrainCellType } from '../core/WorldGrid.ts';
-import type { CollisionSystem, CollisionLayer } from './CollisionSystem.ts';
+import type { WorldGrid } from '../core/WorldGrid.ts';
+import type { CollisionSystem } from './CollisionSystem.ts';
 
 // === PATH TYPES ===
 
@@ -33,19 +33,6 @@ export interface PathfindingConfig {
   smoothPath: boolean;
   unitRadius: number;
 }
-
-// Terrain cost multipliers
-const TERRAIN_COSTS: Record<TerrainCellType, number> = {
-  water: Infinity,
-  shallow_water: 3,
-  sand: 1.5,
-  grass: 1,
-  forest: 2,
-  rock: Infinity,
-  mountain: Infinity,
-  road: 0.75,
-  bridge: 1
-};
 
 // === PATHFINDING SYSTEM ===
 
@@ -97,7 +84,6 @@ export class PathfindingSystem {
     }
 
     // Grid coordinates
-    const cellSize = this.config.gridCellSize;
     const startGrid = this.worldToGrid(start);
     const goalGrid = this.worldToGrid(goal);
 
@@ -412,7 +398,6 @@ export class PathfindingSystem {
 
   generateFlowField(goal: Position, bounds: { minX: number; minY: number; maxX: number; maxY: number }): Map<string, Position> {
     const flowField = new Map<string, Position>();
-    const cellSize = this.config.gridCellSize;
     
     const goalGrid = this.worldToGrid(goal);
     

@@ -259,12 +259,13 @@ export class BoatManager {
   private renderBoat(
     ctx: CanvasRenderingContext2D,
     boat: Boat,
-    cameraX: number,
-    cameraY: number,
+    _cameraX: number,
+    _cameraY: number,
     gameTime: number
   ): void {
-    const x = boat.position.x - cameraX;
-    const y = boat.position.y - cameraY;
+    // Camera offset is already applied via canvas transform
+    const x = boat.position.x;
+    const y = boat.position.y;
     
     ctx.save();
     ctx.translate(x, y);

@@ -3,8 +3,8 @@
 // Safe zone with harvesting, crafting, recruiting, inventory
 // ============================================
 
-import type { Position, FactionId } from '../../types/index.ts';
-import { saveSystem, type SavedGameState, type GameSettings } from '../systems/SaveSystem.ts';
+import type { FactionId as _FactionId } from '../../types/index.ts';
+import { saveSystem, type SavedGameState } from '../systems/SaveSystem.ts';
 
 // === RESOURCE TYPES ===
 

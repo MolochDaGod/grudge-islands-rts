@@ -9,6 +9,8 @@ import { GridSystem, EntitySystem } from '../core/GridSystem.ts';
 import type { TerrainRenderer } from './TerrainRenderer.ts';
 import type { BoatManager } from '../entities/Boat.ts';
 import type { BuildingManager } from '../entities/Building.ts';
+import type { TowerManager } from '../entities/TowerSystem.ts';
+import type { EffectsManager } from '../systems/EffectsManager.ts';
 import { WORLD_CONFIG } from '../world/WorldGenerator.ts';
 
 // Faction colors
@@ -235,14 +237,16 @@ export class Renderer {
   }
   
   /**
-   * Render with full terrain, boats, and buildings integration
+   * Render with full terrain, boats, buildings, towers, and effects
    */
   renderWithTerrain(
     deltaTime: number,
     gameTime: number,
     terrainRenderer: TerrainRenderer,
     boatManager: BoatManager,
-    buildingManager: BuildingManager
+    buildingManager: BuildingManager,
+    towerManager?: TowerManager,
+    effectsManager?: EffectsManager
   ): void {
     // Clear canvases
     this.bgCtx.clearRect(0, 0, this.screenWidth, this.screenHeight);
@@ -271,17 +275,33 @@ export class Renderer {
     this.fgCtx.scale(this.zoomLevel, this.zoomLevel);
     this.fgCtx.translate(-this.cameraX, -this.cameraY);
     
-    // Render boats
-    boatManager.render(this.fgCtx, this.cameraX, this.cameraY, gameTime);
+    // Render boats (camera offset NOT needed - canvas transform handles it)
+    boatManager.render(this.fgCtx, 0, 0, gameTime);
     
-    // Render buildings
-    buildingManager.render(this.fgCtx, this.cameraX, this.cameraY, gameTime);
+    // Render buildings (camera offset NOT needed - canvas transform handles it)
+    buildingManager.render(this.fgCtx, 0, 0, gameTime);
     
     // Render building placement preview
-    buildingManager.renderPlacementPreview(this.fgCtx, this.cameraX, this.cameraY);
+    buildingManager.renderPlacementPreview(this.fgCtx, 0, 0);
+    
+    // Render towers (camera offset NOT needed - canvas transform handles it)
+    if (towerManager) {
+      towerManager.render(this.fgCtx, 0, 0, gameTime);
+      
+      // Render tower placement preview
+      const towerMenu = towerManager.getMenuState();
+      if (towerMenu.selectedTower) {
+        towerManager.renderPlacementPreview(this.fgCtx, 0, 0);
+      }
+    }
     
     // Render entities (units)
     this.renderEntities(deltaTime, gameTime);
+    
+    // Render effects and projectiles (camera offset NOT needed - canvas transform handles it)
+    if (effectsManager) {
+      effectsManager.render(this.fgCtx, 0, 0);
+    }
     
     this.fgCtx.restore();
     

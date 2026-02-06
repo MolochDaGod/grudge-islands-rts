@@ -58,7 +58,6 @@ export class GameEngine {
   // Debug flags
   private debugCollision: boolean = false;
   private debugAggro: boolean = false;
-  private debugPathfinding: boolean = false;
   
   // Player resources
   private playerGold: number = 500;
@@ -218,28 +217,20 @@ export class GameEngine {
     this.setupInputHandlers();
     
     // Initialize input manager for advanced camera controls
-    this.inputManager = new InputManager({
-      canvas: this.fgCanvas,
-      worldWidth: WORLD_CONFIG.width,
-      worldHeight: WORLD_CONFIG.height,
-      minimapSize: 200,
-      minimapPosition: { x: 10, y: window.innerHeight - 210 },
-      enableEdgePan: true,
-      enableKeyboardPan: true,
-      enableWheelZoom: true,
-      enableMiddleMousePan: true,
-      enableMinimapClick: true
-    });
+    this.inputManager = new InputManager(this.fgCanvas);
     
     // Connect input manager to renderer camera
-    this.inputManager.onCameraChange = (x, y, zoom) => {
+    this.inputManager.onCameraMove = (x: number, y: number) => {
       this.renderer.setCameraPosition(x, y);
+    };
+    
+    this.inputManager.onCameraZoom = (zoom: number, _centerX: number, _centerY: number) => {
       this.renderer.setZoom(zoom);
     };
     
-    this.inputManager.onSelectionComplete = (bounds) => {
+    this.inputManager.onSelectionEnd = (screenX: number, screenY: number) => {
       // Forward to renderer selection system
-      this.renderer.setSelectionBounds(bounds);
+      this.renderer.endSelection(screenX, screenY);
     };
     
     // Complete loading
@@ -697,8 +688,8 @@ export class GameEngine {
       return entity?.position ?? null;
     });
     
-    // Update input manager
-    this.inputManager?.update(deltaTime * 1000);
+    // Update input manager edge panning
+    this.inputManager?.updateEdgePan(deltaTime);
     
     // Passive gold income
     this.playerGold += deltaTime * 2; // 2 gold per second
@@ -743,22 +734,14 @@ export class GameEngine {
       this.gameTime,
       this.terrainRenderer,
       this.boatManager,
-      this.buildingManager
+      this.buildingManager,
+      this.towerManager,
+      this.effectsManager
     );
     
-    // Render towers on foreground canvas
-    const fgCtx = this.fgCanvas.getContext('2d')!;
-    const cameraPos = this.renderer.getCameraPosition();
-    this.towerManager.render(fgCtx, cameraPos.x, cameraPos.y, this.gameTime);
-    
-    // Render tower placement preview
-    const towerMenu = this.towerManager.getMenuState();
-    if (towerMenu.selectedTower) {
-      this.towerManager.renderPlacementPreview(fgCtx, cameraPos.x, cameraPos.y);
-    }
-    
-    // Render tower UI elements on UI canvas
+    // Render tower UI elements on UI canvas (no world transform needed)
     const uiCtx = this.uiCanvas.getContext('2d')!;
+    const towerMenu = this.towerManager.getMenuState();
     
     // Render tower build menu if open
     if (towerMenu.isOpen) {
@@ -768,15 +751,24 @@ export class GameEngine {
     // Render tower info panel if tower is selected
     this.towerUI.render(uiCtx, window.innerWidth, window.innerHeight);
     
-    // Render effects (projectiles, explosions)
-    this.effectsManager.render(fgCtx, cameraPos.x, cameraPos.y);
+    // Debug rendering (needs camera offset since it's outside transform)
+    const fgCtx = this.fgCanvas.getContext('2d')!;
+    const cameraPos = this.renderer.getCameraPosition();
+    const zoom = this.renderer.getZoom();
     
-    // Debug rendering
-    if (this.debugCollision) {
-      this.collisionSystem.debugRender(fgCtx, cameraPos.x, cameraPos.y);
-    }
-    if (this.debugAggro) {
-      this.aggroSystem.debugRender(fgCtx, cameraPos.x, cameraPos.y);
+    if (this.debugCollision || this.debugAggro) {
+      fgCtx.save();
+      fgCtx.scale(zoom, zoom);
+      fgCtx.translate(-cameraPos.x, -cameraPos.y);
+      
+      if (this.debugCollision) {
+        this.collisionSystem.debugRender(fgCtx, 0, 0);
+      }
+      if (this.debugAggro) {
+        this.aggroSystem.debugRender(fgCtx, 0, 0);
+      }
+      
+      fgCtx.restore();
     }
   }
   
