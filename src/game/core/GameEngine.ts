@@ -20,6 +20,16 @@ import { sceneManager, HeroCreationData } from './SceneManager.ts';
 import { Hero } from '../entities/Hero.ts';
 import { UnitMovementSystem } from '../systems/UnitMovement.ts';
 import { AIController } from '../systems/AIController.ts';
+import { InputManager } from './InputManager.ts';
+
+// New combat and collision systems
+import {
+  CollisionSystem,
+  CollisionLayer,
+  AggroSystem,
+  EffectsManager,
+  PathfindingSystem
+} from '../systems/index.ts';
 
 export class GameEngine {
   // Core systems
@@ -37,6 +47,18 @@ export class GameEngine {
   // Movement and AI systems
   private movementSystem!: UnitMovementSystem;
   private aiController!: AIController;
+  private inputManager!: InputManager;
+  
+  // Combat and collision systems
+  private collisionSystem!: CollisionSystem;
+  private aggroSystem!: AggroSystem;
+  private effectsManager!: EffectsManager;
+  private pathfindingSystem!: PathfindingSystem;
+  
+  // Debug flags
+  private debugCollision: boolean = false;
+  private debugAggro: boolean = false;
+  private debugPathfinding: boolean = false;
   
   // Player resources
   private playerGold: number = 500;
@@ -135,6 +157,45 @@ export class GameEngine {
       // TODO: Apply damage to target entity
     };
     
+    // Initialize collision and combat systems
+    this.updateLoadingState('Initializing combat systems...', 18);
+    this.collisionSystem = new CollisionSystem(32);
+    this.aggroSystem = new AggroSystem(this.collisionSystem);
+    this.effectsManager = new EffectsManager();
+    this.pathfindingSystem = new PathfindingSystem({ gridCellSize: 32 });
+    this.pathfindingSystem.setCollisionSystem(this.collisionSystem);
+    
+    // Wire up aggro system attack events to effects manager
+    this.aggroSystem.onAttack = (event) => {
+      if (event.isRanged && event.projectileType) {
+        // Spawn projectile visual
+        const attackerEntity = this.aggroSystem.getEntity(event.attackerId);
+        if (attackerEntity) {
+          this.effectsManager.spawnProjectile({
+            sourceId: event.attackerId,
+            targetId: event.targetId,
+            sourcePosition: attackerEntity.position,
+            targetPosition: event.position,
+            damage: event.damage,
+            style: event.projectileType as any,
+            isHoming: true
+          });
+        }
+      } else {
+        // Melee hit effect
+        this.effectsManager.spawnHit(event.position, false, 0.5);
+      }
+    };
+    
+    // Wire up death events
+    this.aggroSystem.onEntityDeath = (entity, killer) => {
+      console.log(`Entity ${entity.id} killed by ${killer?.id ?? 'unknown'}`);
+      // Spawn death effect
+      this.effectsManager.spawnExplosion(entity.position, 'blood', 0.6);
+      // Remove collider
+      this.collisionSystem.removeCollider(entity.id);
+    };
+    
     // Setup tower callbacks
     this.towerUI.onUpgrade = (towerId) => this.handleTowerUpgrade(towerId);
     this.towerUI.onSell = (towerId) => this.handleTowerSell(towerId);
@@ -155,6 +216,31 @@ export class GameEngine {
     // Setup input handlers
     this.updateLoadingState('Setting up controls...', 95);
     this.setupInputHandlers();
+    
+    // Initialize input manager for advanced camera controls
+    this.inputManager = new InputManager({
+      canvas: this.fgCanvas,
+      worldWidth: WORLD_CONFIG.width,
+      worldHeight: WORLD_CONFIG.height,
+      minimapSize: 200,
+      minimapPosition: { x: 10, y: window.innerHeight - 210 },
+      enableEdgePan: true,
+      enableKeyboardPan: true,
+      enableWheelZoom: true,
+      enableMiddleMousePan: true,
+      enableMinimapClick: true
+    });
+    
+    // Connect input manager to renderer camera
+    this.inputManager.onCameraChange = (x, y, zoom) => {
+      this.renderer.setCameraPosition(x, y);
+      this.renderer.setZoom(zoom);
+    };
+    
+    this.inputManager.onSelectionComplete = (bounds) => {
+      // Forward to renderer selection system
+      this.renderer.setSelectionBounds(bounds);
+    };
     
     // Complete loading
     this.updateLoadingState('Ready!', 100);
@@ -224,6 +310,30 @@ export class GameEngine {
       const heroSpawn = this.findWalkablePosition(playerIsland.center.x, playerIsland.center.y, 50);
       this.playerHero = new Hero(heroData, heroSpawn);
       console.log(`Hero ${heroData.name} (${heroData.heroClass}) spawned at`, heroSpawn);
+      
+      // Register hero with collision system
+      this.collisionSystem.addCircleCollider(
+        this.playerHero.id,
+        heroSpawn,
+        20, // hero radius
+        CollisionLayer.Unit,
+        'hero',
+        1 as FactionId
+      );
+      
+      // Register hero with aggro system
+      this.aggroSystem.registerEntity({
+        id: this.playerHero.id,
+        type: 'hero',
+        position: heroSpawn,
+        faction: 1 as FactionId,
+        health: this.playerHero.stats.health,
+        maxHealth: this.playerHero.stats.maxHealth,
+        attackDamage: 25,
+        attackRange: 60,
+        aggroRange: 250,
+        behavior: 'aggressive'
+      });
     }
     
     // Spawn player units on their starting island (only on walkable terrain)
@@ -240,14 +350,36 @@ export class GameEngine {
       // Only spawn if position is walkable
       if (this.worldGenerator.isWalkable(x, y)) {
         const unitId = generateId();
+        const pos = { x, y };
+        
         this.entitySystem.registerEntity({
           id: unitId,
           faction: 1 as FactionId,
           size: 16,
-          position: { x, y }
+          position: pos
         });
+        
         // Register with movement system
-        this.movementSystem.registerUnit(unitId, { x, y }, 1 as FactionId, 80);
+        this.movementSystem.registerUnit(unitId, pos, 1 as FactionId, 80);
+        
+        // Register with collision system
+        this.collisionSystem.addCircleCollider(
+          unitId, pos, 12, CollisionLayer.Unit, 'unit', 1 as FactionId
+        );
+        
+        // Register with aggro system
+        this.aggroSystem.registerEntity({
+          id: unitId,
+          type: 'unit',
+          position: pos,
+          faction: 1 as FactionId,
+          health: 100,
+          attackDamage: 12,
+          attackRange: 45,
+          aggroRange: 180,
+          behavior: 'aggressive'
+        });
+        
         spawnedPlayerUnits++;
       }
       attempts++;
@@ -267,21 +399,43 @@ export class GameEngine {
         // Only spawn if position is walkable
         if (this.worldGenerator.isWalkable(x, y)) {
           const unitId = generateId();
+          const pos = { x, y };
+          
           this.entitySystem.registerEntity({
             id: unitId,
             faction: 2 as FactionId,
             size: 16,
-            position: { x, y }
+            position: pos
           });
+          
           // Register with movement and AI systems
-          this.movementSystem.registerUnit(unitId, { x, y }, 2 as FactionId, 60);
-          this.aiController.registerUnit(unitId, { x, y }, 2 as FactionId, {
+          this.movementSystem.registerUnit(unitId, pos, 2 as FactionId, 60);
+          this.aiController.registerUnit(unitId, pos, 2 as FactionId, {
             health: 100,
             maxHealth: 100,
             attackDamage: 10,
             attackRange: 50,
             aggroRange: 200
           });
+          
+          // Register with collision system
+          this.collisionSystem.addCircleCollider(
+            unitId, pos, 12, CollisionLayer.Unit, 'enemy', 2 as FactionId
+          );
+          
+          // Register with aggro system
+          this.aggroSystem.registerEntity({
+            id: unitId,
+            type: 'enemy',
+            position: pos,
+            faction: 2 as FactionId,
+            health: 100,
+            attackDamage: 10,
+            attackRange: 50,
+            aggroRange: 200,
+            behavior: 'aggressive'
+          });
+          
           spawnedEnemyUnits++;
         }
         attempts++;
@@ -512,6 +666,40 @@ export class GameEngine {
     this.aiController.updatePlayerUnits(playerUnitsMap);
     this.aiController.update(deltaTime);
     
+    // Update collision system and resolve collisions
+    const collisionResults = this.collisionSystem.update();
+    for (const result of collisionResults) {
+      // Resolve collision (separate overlapping entities)
+      const resolved = this.collisionSystem.resolveCollision(result);
+      
+      // Update entity positions based on resolution
+      const entityA = this.entitySystem.getEntity(result.colliderA.id);
+      const entityB = this.entitySystem.getEntity(result.colliderB.id);
+      
+      if (entityA && !result.colliderA.isStatic) {
+        this.entitySystem.updateEntityPosition(result.colliderA.id, resolved.posA);
+        this.collisionSystem.updatePosition(result.colliderA.id, resolved.posA);
+        this.movementSystem.updateUnitPosition?.(result.colliderA.id, resolved.posA);
+      }
+      if (entityB && !result.colliderB.isStatic) {
+        this.entitySystem.updateEntityPosition(result.colliderB.id, resolved.posB);
+        this.collisionSystem.updatePosition(result.colliderB.id, resolved.posB);
+        this.movementSystem.updateUnitPosition?.(result.colliderB.id, resolved.posB);
+      }
+    }
+    
+    // Update aggro/combat system
+    this.aggroSystem.update(deltaTime * 1000); // AggroSystem expects ms
+    
+    // Update effects and projectiles
+    this.effectsManager.update(deltaTime * 1000, (targetId) => {
+      const entity = this.aggroSystem.getEntity(targetId);
+      return entity?.position ?? null;
+    });
+    
+    // Update input manager
+    this.inputManager?.update(deltaTime * 1000);
+    
     // Passive gold income
     this.playerGold += deltaTime * 2; // 2 gold per second
   }
@@ -579,6 +767,17 @@ export class GameEngine {
     
     // Render tower info panel if tower is selected
     this.towerUI.render(uiCtx, window.innerWidth, window.innerHeight);
+    
+    // Render effects (projectiles, explosions)
+    this.effectsManager.render(fgCtx, cameraPos.x, cameraPos.y);
+    
+    // Debug rendering
+    if (this.debugCollision) {
+      this.collisionSystem.debugRender(fgCtx, cameraPos.x, cameraPos.y);
+    }
+    if (this.debugAggro) {
+      this.aggroSystem.debugRender(fgCtx, cameraPos.x, cameraPos.y);
+    }
   }
   
   /**

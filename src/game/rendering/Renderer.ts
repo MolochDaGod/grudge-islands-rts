@@ -534,4 +534,43 @@ export class Renderer {
   getCameraPosition(): Position {
     return { x: this.cameraX, y: this.cameraY };
   }
+  
+  /**
+   * Set zoom level directly
+   */
+  setZoom(zoom: number): void {
+    this.zoomLevel = Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
+    this.bgDirty = true;
+  }
+  
+  /**
+   * Set selection bounds from InputManager
+   */
+  setSelectionBounds(bounds: { startX: number; startY: number; endX: number; endY: number } | null): void {
+    if (!bounds) {
+      this.isSelecting = false;
+      return;
+    }
+    
+    // Update selection state
+    this.selectionStart = { x: bounds.startX, y: bounds.startY };
+    this.selectionEnd = { x: bounds.endX, y: bounds.endY };
+    
+    // Calculate selection box in world coordinates
+    const x1 = this.screenToWorldX(Math.min(bounds.startX, bounds.endX));
+    const y1 = this.screenToWorldY(Math.min(bounds.startY, bounds.endY));
+    const x2 = this.screenToWorldX(Math.max(bounds.startX, bounds.endX));
+    const y2 = this.screenToWorldY(Math.max(bounds.startY, bounds.endY));
+    
+    // Find entities in selection box
+    this.selectedEntityIds.clear();
+    const entities = this.entitySystem.getEntitiesInRect(x1, y1, x2 - x1, y2 - y1);
+    
+    for (const entity of entities) {
+      // Only select player units (faction 1)
+      if (entity.faction === 1) {
+        this.selectedEntityIds.add(entity.id);
+      }
+    }
+  }
 }
