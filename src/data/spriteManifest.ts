@@ -22,6 +22,7 @@ const ANIMATION_CONFIGS: Record<AnimationState, { frameDuration: number; loop: b
 
 /**
  * Create sprite definition for a character
+ * Note: Sprite folders have double nesting: characters/{name}/{name}/
  */
 function createSpriteDefinition(
   folderName: string,
@@ -29,7 +30,8 @@ function createSpriteDefinition(
   width: number = 64,
   height: number = 64
 ): SpriteDefinition {
-  const basePath = `${SPRITE_BASE_PATH}/${folderName}/${baseName}`;
+  // Sprites are nested: characters/Skeleton/Skeleton/Skeleton-Idle.png
+  const basePath = `${SPRITE_BASE_PATH}/${folderName}/${baseName}/${baseName}`;
   
   return {
     name: baseName,
@@ -63,7 +65,8 @@ function createSpriteDefinition(
       },
       Attack03: {
         state: 'Attack03',
-        frames: [`${basePath}-Attack03.png`],
+        // Attack03 may not exist for all units, use Attack02 as fallback
+        frames: [`${basePath}-Attack02.png`],
         frameDuration: ANIMATION_CONFIGS.Attack03.frameDuration,
         loop: ANIMATION_CONFIGS.Attack03.loop
       },
@@ -149,9 +152,8 @@ export function getAllSpritePaths(unitType: UnitTypeName): string[] {
     paths.push(...animation.frames);
   }
   
-  // Add base sprite and shadow
+  // Add base sprite (shadow is in subfolder, skip for now)
   paths.push(`${sprite.basePath}.png`);
-  paths.push(`${sprite.basePath}-Shadow.png`);
   
   return [...new Set(paths)]; // Remove duplicates
 }

@@ -224,31 +224,33 @@ export class TerrainRenderer {
     this.renderTerrainCache();
     
     // Calculate visible region
-    const startX = Math.max(0, cameraX);
-    const startY = Math.max(0, cameraY);
-    const endX = Math.min(WORLD_CONFIG.width, cameraX + viewWidth / zoom);
-    const endY = Math.min(WORLD_CONFIG.height, cameraY + viewHeight / zoom);
+    const startX = Math.max(0, Math.floor(cameraX));
+    const startY = Math.max(0, Math.floor(cameraY));
+    const endX = Math.min(WORLD_CONFIG.width, Math.ceil(cameraX + viewWidth / zoom));
+    const endY = Math.min(WORLD_CONFIG.height, Math.ceil(cameraY + viewHeight / zoom));
     
-    // Draw animated water background
+    // Draw animated water background (fills visible area in world coords)
     this.renderWater(ctx, cameraX, cameraY, viewWidth, viewHeight, zoom, gameTime);
     
-    // Draw terrain from cache
+    // Draw terrain from cache at world coordinates
+    // Context is already transformed, so draw at world position
     ctx.drawImage(
       this.terrainCanvas,
       startX, startY, endX - startX, endY - startY,
-      0, 0, (endX - startX), (endY - startY)
+      startX, startY, endX - startX, endY - startY
     );
     
     // Render dynamic island elements (camps, nodes, docks)
+    // These use world coordinates since context is already transformed
     for (const island of this.worldGen.islands.values()) {
-      this.renderDynamicIslandFeatures(ctx, island, cameraX, cameraY, gameTime);
+      this.renderDynamicIslandFeatures(ctx, island, gameTime);
     }
   }
   
   private renderWater(
     ctx: CanvasRenderingContext2D,
     cameraX: number,
-    _cameraY: number,
+    cameraY: number,
     viewWidth: number,
     viewHeight: number,
     zoom: number,
@@ -257,25 +259,33 @@ export class TerrainRenderer {
     // Animated water with wave effect
     const waveOffset = Math.sin(gameTime * 0.5) * 5;
     
-    // Create gradient for deep water
-    const gradient = ctx.createLinearGradient(0, 0, 0, viewHeight / zoom);
+    // Calculate visible area in world coordinates
+    const visibleWidth = viewWidth / zoom;
+    const visibleHeight = viewHeight / zoom;
+    
+    // Create gradient for deep water (in world coordinates)
+    const gradient = ctx.createLinearGradient(cameraX, cameraY, cameraX, cameraY + visibleHeight);
     gradient.addColorStop(0, '#0a3050');
     gradient.addColorStop(0.5, '#1a4c7a');
     gradient.addColorStop(1, '#0a3050');
     
+    // Fill the entire world with water
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, viewWidth / zoom, viewHeight / zoom);
+    ctx.fillRect(0, 0, WORLD_CONFIG.width, WORLD_CONFIG.height);
     
-    // Draw wave lines
+    // Draw wave lines in visible area
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1;
     
     const waveSpacing = 50;
-    for (let y = -waveSpacing; y < viewHeight / zoom + waveSpacing; y += waveSpacing) {
+    const startY = Math.floor(cameraY / waveSpacing) * waveSpacing;
+    const endY = cameraY + visibleHeight + waveSpacing;
+    
+    for (let y = startY; y < endY; y += waveSpacing) {
       ctx.beginPath();
-      for (let x = 0; x < viewWidth / zoom; x += 10) {
-        const waveY = y + Math.sin((x + cameraX + gameTime * 30) * 0.02) * 5 + waveOffset;
-        if (x === 0) {
+      for (let x = cameraX; x < cameraX + visibleWidth; x += 10) {
+        const waveY = y + Math.sin((x + gameTime * 30) * 0.02) * 5 + waveOffset;
+        if (x === cameraX) {
           ctx.moveTo(x, waveY);
         } else {
           ctx.lineTo(x, waveY);
@@ -288,35 +298,32 @@ export class TerrainRenderer {
   private renderDynamicIslandFeatures(
     ctx: CanvasRenderingContext2D,
     island: Island,
-    cameraX: number,
-    cameraY: number,
     gameTime: number
   ): void {
-    // Render camp
+    // Render camp (context is already transformed to world coordinates)
     if (island.camp && !island.camp.isDestroyed) {
-      this.renderCamp(ctx, island.camp, cameraX, cameraY, gameTime);
+      this.renderCamp(ctx, island.camp, gameTime);
     }
     
     // Render nodes
     for (const node of island.nodes) {
-      this.renderNode(ctx, node, cameraX, cameraY, gameTime);
+      this.renderNode(ctx, node, gameTime);
     }
     
     // Render dock points
     for (const dock of island.dockPoints) {
-      this.renderDock(ctx, dock, cameraX, cameraY);
+      this.renderDock(ctx, dock);
     }
   }
   
   private renderCamp(
     ctx: CanvasRenderingContext2D,
     camp: Camp,
-    cameraX: number,
-    cameraY: number,
     _gameTime: number
   ): void {
-    const x = camp.position.x - cameraX;
-    const y = camp.position.y - cameraY;
+    // Use world coordinates directly (context is transformed)
+    const x = camp.position.x;
+    const y = camp.position.y;
     const size = 60;
     
     // Try to use Tiny Swords castle sprite
@@ -370,12 +377,11 @@ export class TerrainRenderer {
   private renderNode(
     ctx: CanvasRenderingContext2D,
     node: IslandNode,
-    cameraX: number,
-    cameraY: number,
     gameTime: number
   ): void {
-    const x = node.position.x - cameraX;
-    const y = node.position.y - cameraY;
+    // Use world coordinates directly (context is transformed)
+    const x = node.position.x;
+    const y = node.position.y;
     const size = 25;
     
     // Pulsing effect for active nodes
@@ -412,12 +418,11 @@ export class TerrainRenderer {
   
   private renderDock(
     ctx: CanvasRenderingContext2D,
-    dock: DockPoint,
-    cameraX: number,
-    cameraY: number
+    dock: DockPoint
   ): void {
-    const x = dock.position.x - cameraX;
-    const y = dock.position.y - cameraY;
+    // Use world coordinates directly (context is transformed)
+    const x = dock.position.x;
+    const y = dock.position.y;
     const size = 15;
     
     // Dock marker
