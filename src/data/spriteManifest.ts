@@ -175,12 +175,29 @@ export const FACTION_COLORS = {
   3: { main: '#9900FF', attack: '#FF00FF' }  // Enemy - purple/magenta
 };
 
-// === GENERAL SPRITE MAPPING (for class selection) ===
-export const GENERAL_SPRITES: Record<string, UnitTypeName> = {
+// === HERO CLASS TO SPRITE MAPPING ===
+export const HERO_SPRITE_MAPPING: Record<string, UnitTypeName> = {
   Warrior: 'Knight',
   Mage: 'Wizard',
-  Rogue: 'Archer',
-  Tank: 'KnightTemplar',
   Ranger: 'Archer',
-  Tactician: 'Priest'
+  Worg: 'Werewolf'
 };
+
+// Alias for backwards compatibility
+export const GENERAL_SPRITES = HERO_SPRITE_MAPPING;
+
+/**
+ * Get the sprite definition for a hero class
+ */
+export function getHeroSpriteDefinition(heroClass: string): SpriteDefinition {
+  const unitType = HERO_SPRITE_MAPPING[heroClass] || 'Knight';
+  return SPRITE_DEFINITIONS[unitType];
+}
+
+/**
+ * Get sprite paths for a hero class (for preloading)
+ */
+export function getHeroSpritePaths(heroClass: string): string[] {
+  const unitType = HERO_SPRITE_MAPPING[heroClass] || 'Knight';
+  return getAllSpritePaths(unitType);
+}
