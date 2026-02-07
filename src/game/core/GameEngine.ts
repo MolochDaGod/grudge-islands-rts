@@ -31,6 +31,12 @@ import {
   PathfindingSystem
 } from '../systems/index.ts';
 
+// Game Systems Integration
+import { gameSystems } from './GameSystemsIntegration.ts';
+
+// Resource HUD
+import { resourceHUD } from '../../ui/ResourceHUD.ts';
+
 export class GameEngine {
   // Core systems
   private locationGrid!: GridSystem;
@@ -330,6 +336,68 @@ export class GameEngine {
   private setupInitialState(heroData?: HeroCreationData): void {
     const playerIsland = this.worldGenerator.getPlayerStartIsland();
     const enemyIslands = this.worldGenerator.getEnemyIslands();
+    
+    // Initialize game systems integration
+    gameSystems.init({
+      playerFaction: 1 as FactionId,
+      playerRace: 'human',
+      campPosition: playerIsland.center,
+      campLevel: 1,
+    });
+    
+    // Wire external systems
+    gameSystems.setExternalSystems(
+      this.collisionSystem,
+      this.aggroSystem,
+      this.effectsManager
+    );
+    
+    // Register player camp with production system
+    const campId = `camp_player_${Date.now()}`;
+    gameSystems.registerBuilding(campId, 'camp', playerIsland.center, 1 as FactionId);
+    
+    // Wire hero recruitment callback
+    gameSystems.onHeroRecruited = (heroClass, position) => {
+      console.log(`[GameEngine] Hero ${heroClass} recruited at`, position);
+      // TODO: Create hero entity
+    };
+    
+    // Setup player island resources and workers
+    gameSystems.setupIsland(
+      'player_island',
+      {
+        x: playerIsland.center.x - playerIsland.radius,
+        y: playerIsland.center.y - playerIsland.radius,
+        width: playerIsland.radius * 2,
+        height: playerIsland.radius * 2,
+      },
+      true,  // isPlayerIsland
+      'large'
+    );
+    
+    // Spawn starting workers
+    gameSystems.setupStartingWorkers(2);
+    
+    // Initialize resource HUD
+    resourceHUD.init();
+    
+    // Setup enemy islands with monsters
+    for (let i = 0; i < enemyIslands.length; i++) {
+      const island = enemyIslands[i];
+      const size = island.radius > 200 ? 'large' : island.radius > 120 ? 'medium' : 'small';
+      
+      gameSystems.setupIsland(
+        `enemy_island_${i}`,
+        {
+          x: island.center.x - island.radius,
+          y: island.center.y - island.radius,
+          width: island.radius * 2,
+          height: island.radius * 2,
+        },
+        false,  // not player island
+        size as 'small' | 'medium' | 'large'
+      );
+    }
     
     // Create player hero if hero data provided
     if (heroData) {
@@ -734,6 +802,25 @@ export class GameEngine {
     
     // Passive gold income
     this.playerGold += deltaTime * 2; // 2 gold per second
+    
+    // Update game systems integration (workers, monsters, production, combat AI)
+    const playerUnitsForMonsters = new Map<string, { position: Position; health: number }>();
+    if (this.playerHero && !this.playerHero.isDead()) {
+      playerUnitsForMonsters.set(this.playerHero.id, {
+        position: this.playerHero.position,
+        health: this.playerHero.stats.health
+      });
+    }
+    // Add spawned units to player units map
+    for (const unit of gameSystems.getSpawnedUnits()) {
+      if ((unit.faction as number) === 1) {
+        playerUnitsForMonsters.set(unit.id, {
+          position: unit.position,
+          health: unit.stats.health
+        });
+      }
+    }
+    gameSystems.update(deltaTime, playerUnitsForMonsters);
   }
   
   /**
@@ -826,6 +913,9 @@ export class GameEngine {
     
     // Update tower UI with current gold
     this.towerUI.updatePlayerGold(Math.floor(this.playerGold));
+    
+    // Update resource HUD
+    resourceHUD.update();
     
     // Update hero panel
     if (this.playerHero) {

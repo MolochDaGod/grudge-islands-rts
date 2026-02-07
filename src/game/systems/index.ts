@@ -103,3 +103,13 @@ export {
   type HeroSlot,
   type HeroSaveData
 } from './HeroManager.ts';
+
+// Worker System
+export {
+  WorkerSystem,
+  workerSystem,
+  type Worker,
+  type WorkerState,
+  type ResourceNode,
+  type PlayerResources,
+} from './WorkerSystem.ts';
