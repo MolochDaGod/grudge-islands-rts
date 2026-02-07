@@ -53,3 +53,53 @@ export {
   type SoundCategory,
   type SoundDefinition
 } from './AudioManager.ts';
+
+// Production System
+export {
+  ProductionSystem,
+  productionSystem,
+  type ProductionType,
+  type ProductionItem,
+  type BuildingProduction,
+  type ProductionCompleteEvent
+} from './ProductionSystem.ts';
+
+// Monster System
+export {
+  MonsterSystem,
+  monsterSystem,
+  type Monster,
+  type MonsterTier,
+  type MonsterState,
+  type MonsterSpawnConfig,
+  type MonsterKillEvent
+} from './MonsterSystem.ts';
+
+// Combat AI
+export {
+  CombatAI,
+  combatAI,
+  type CombatState,
+  type CombatUnit,
+  type DamageEvent,
+  type CombatGroup,
+  type TargetPriority as CombatTargetPriority
+} from './CombatAI.ts';
+
+// AI Controller (basic)
+export {
+  AIController,
+  aiController,
+  type AIState,
+  type AIUnit,
+  type AIDecision
+} from './AIController.ts';
+
+// Hero Manager
+export {
+  HeroManager,
+  heroManager,
+  type ManagedHero,
+  type HeroSlot,
+  type HeroSaveData
+} from './HeroManager.ts';

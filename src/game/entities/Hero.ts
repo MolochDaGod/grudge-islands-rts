@@ -154,6 +154,10 @@ export class Hero {
   // Movement state
   public moveTarget: { x: number; y: number } | null = null;
   public isMoving: boolean = false;
+
+  // Shapeshift state (for Worg)
+  public form: 'normal' | 'werebear' | 'werewolf' = 'normal';
+  public shapeshiftCooldown: number = 0;
   
   constructor(heroData: HeroCreationData, position: { x: number; y: number }) {
     const classDef = HERO_CLASSES[heroData.heroClass];
@@ -185,6 +189,11 @@ export class Hero {
     // Update attack cooldown
     if (this.attackCooldown > 0) {
       this.attackCooldown -= deltaTime;
+    }
+
+    // Update shapeshift cooldown
+    if (this.shapeshiftCooldown > 0) {
+      this.shapeshiftCooldown = Math.max(0, this.shapeshiftCooldown - deltaTime);
     }
     
     // Handle movement
@@ -350,6 +359,62 @@ export class Hero {
       case 'Worg':
         return { health: 20, mana: 2, strength: 4, agility: 2, intelligence: 0, vitality: 3 };
     }
+  }
+
+  /**
+   * Shapeshift (Worg only) to werebear or werewolf. Applies temporary stat changes.
+   * If already in that form, returns to normal.
+   */
+  shapeshift(to: 'werebear' | 'werewolf'): boolean {
+    if (this.heroClass !== 'Worg') return false;
+    if (this.shapeshiftCooldown > 0) return false;
+
+    if (this.form === to) {
+      // Revert to normal
+      this.form = 'normal';
+      this.applyFormModifiers();
+      this.shapeshiftCooldown = 5; // seconds
+      return true;
+    }
+
+    this.form = to;
+    this.applyFormModifiers();
+    this.shapeshiftCooldown = 5; // seconds
+    return true;
+  }
+
+  /**
+   * Apply form-based stat modifiers (resets to class base then reapplies).
+   */
+  private applyFormModifiers(): void {
+    const base = HERO_CLASSES[this.heroClass].baseStats;
+    // Reset to base (keep current % of health/mana)
+    const hpPct = this.stats.health / this.stats.maxHealth;
+    // Note: mpPct reserved for future mana-based form mechanics
+    // const mpPct = this.stats.mana / this.stats.maxMana;
+
+    this.stats = { ...base };
+
+    if (this.form === 'werebear') {
+      this.stats.maxHealth = Math.floor(this.stats.maxHealth * 1.4);
+      this.stats.health = Math.max(1, Math.floor(this.stats.maxHealth * hpPct));
+      this.stats.armor = Math.floor(this.stats.armor * 1.5) + 4;
+      this.stats.moveSpeed = Math.floor(this.stats.moveSpeed * 0.85);
+      this.attackRange = 50; // melee
+    } else if (this.form === 'werewolf') {
+      this.stats.maxHealth = Math.floor(this.stats.maxHealth * 1.1);
+      this.stats.health = Math.max(1, Math.floor(this.stats.maxHealth * hpPct));
+      this.stats.moveSpeed = Math.floor(this.stats.moveSpeed * 1.25);
+      this.stats.critChance += 0.1;
+      this.stats.attackSpeed *= 1.2;
+      this.attackRange = 60; // fast melee
+    } else {
+      // normal form
+      this.attackRange = this.heroClass === 'Ranger' ? 200 : 50;
+    }
+
+    // Recalculate derived stats after changes
+    this.recalculateStats();
   }
   
   /**
