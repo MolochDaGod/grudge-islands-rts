@@ -113,3 +113,35 @@ export {
   type ResourceNode,
   type PlayerResources,
 } from './WorkerSystem.ts';
+
+// Ship Projectile System
+export {
+  ShipProjectileSystem,
+  BEAM_CONFIGS,
+  AOE_EFFECTS,
+  BEAM_TO_AOE,
+  type BeamColor,
+  type BeamConfig,
+  type AOEEffectConfig,
+  type ShipProjectile,
+  type ActiveAOE
+} from './ShipProjectileSystem.ts';
+
+// Upgrade System
+export {
+  UpgradeSystem,
+  upgradeSystem,
+  TOWER_UPGRADE_TEMPLATES,
+  BOAT_UPGRADE_TEMPLATES,
+  ABILITY_TEMPLATES,
+  TOWER_ABILITIES,
+  BOAT_ABILITIES,
+  type UpgradeStat,
+  type AbilityType,
+  type UpgradeCost,
+  type StatUpgrade,
+  type AbilityUpgrade,
+  type UpgradeableStats,
+  type UpgradeableAbilities,
+  type UpgradeableEntity
+} from './UpgradeSystem.ts';

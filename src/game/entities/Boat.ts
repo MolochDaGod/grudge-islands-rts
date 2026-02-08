@@ -1,15 +1,39 @@
 // ============================================
 // BOAT SYSTEM
 // Boats for traveling between islands and deploying units
+// With combat capabilities using beam projectiles
 // ============================================
 
 import type { Position, FactionId } from '../../types/index.ts';
 import type { Boat, DockPoint } from '../../types/world.ts';
 import { generateId } from '../core/GridSystem.ts';
 import { BOAT_STATS } from '../../types/world.ts';
+import { ShipProjectileSystem, BeamColor } from '../systems/ShipProjectileSystem.ts';
 
 export class BoatManager {
   private boats: Map<string, Boat> = new Map();
+  private projectileSystem: ShipProjectileSystem;
+  
+  // Callback for damage
+  public onDamageDealt: ((targetId: string, damage: number, shipId: string, isAOE: boolean) => void) | null = null;
+  public onAOEDamage: ((position: Position, radius: number, damage: number, faction: FactionId, excludeIds: Set<string>) => string[]) | null = null;
+  
+  constructor() {
+    this.projectileSystem = new ShipProjectileSystem();
+    
+    // Wire up damage callbacks
+    this.projectileSystem.onDamage = (targetId, damage, projId, isAOE) => {
+      // Extract ship ID from projectile
+      const proj = Array.from(this.projectileSystem['projectiles'].values())
+        .find(p => p.id === projId);
+      const shipId = proj?.shipId ?? 'unknown';
+      this.onDamageDealt?.(targetId, damage, shipId, isAOE);
+    };
+    
+    this.projectileSystem.onAOEDamage = (pos, radius, damage, faction, excludeIds) => {
+      return this.onAOEDamage?.(pos, radius, damage, faction, excludeIds) ?? [];
+    };
+  }
   
   /**
    * Create a new boat at a dock
@@ -102,19 +126,70 @@ export class BoatManager {
   }
   
   /**
+   * Fire projectile at target
+   */
+  fireAtTarget(
+    boat: Boat,
+    targetPosition: Position,
+    targetId: string | null = null,
+    beamColor?: BeamColor
+  ): void {
+    // Determine beam color based on boat model or faction
+    let color = beamColor;
+    if (!color) {
+      switch (boat.model) {
+        case 'warship': color = 'red'; break;      // Warships use explosive red
+        case 'speedboat': color = 'green'; break;  // Speedboats use fast green
+        default: color = 'orange'; break;          // Sailboats use fire orange
+      }
+    }
+    
+    this.projectileSystem.fireProjectile({
+      shipId: boat.id,
+      targetId,
+      sourcePosition: boat.position,
+      targetPosition,
+      damage: boat.attackDamage,
+      faction: boat.owner,
+      beamColor: color,
+      speed: boat.model === 'speedboat' ? 550 : 400,
+      aoeRadius: boat.model === 'warship' ? 80 : 50
+    });
+    
+    boat.attackCooldown = boat.model === 'speedboat' ? 0.8 : 
+                          boat.model === 'warship' ? 2.5 : 1.5;
+  }
+  
+  /**
    * Update all boats
    */
-  update(deltaTime: number): { deployedUnits: { boatId: string; unitId: string; position: Position }[] } {
+  update(
+    deltaTime: number,
+    getEnemyTargets?: (boat: Boat) => { id: string; position: Position }[],
+    getTargetPosition?: (id: string) => Position | null
+  ): { deployedUnits: { boatId: string; unitId: string; position: Position }[] } {
     const deployedUnits: { boatId: string; unitId: string; position: Position }[] = [];
     
     for (const boat of this.boats.values()) {
+      // Update attack cooldown
+      if (boat.attackCooldown > 0) {
+        boat.attackCooldown -= deltaTime;
+      }
+      
       switch (boat.state) {
         case 'sailing':
           this.updateSailing(boat, deltaTime);
+          // Ships can attack while sailing
+          this.updateCombat(boat, getEnemyTargets);
           break;
           
         case 'approaching':
           this.updateApproaching(boat, deltaTime);
+          break;
+          
+        case 'docked':
+          // Docked ships can still defend
+          this.updateCombat(boat, getEnemyTargets);
           break;
           
         case 'deploying':
@@ -130,7 +205,47 @@ export class BoatManager {
       }
     }
     
+    // Update projectiles
+    this.projectileSystem.update(deltaTime * 1000, getTargetPosition);
+    
     return { deployedUnits };
+  }
+  
+  private updateCombat(
+    boat: Boat, 
+    getEnemyTargets?: (boat: Boat) => { id: string; position: Position }[]
+  ): void {
+    if (boat.attackCooldown > 0 || !getEnemyTargets) return;
+    
+    const targets = getEnemyTargets(boat);
+    if (targets.length === 0) {
+      boat.targetBoatId = null;
+      return;
+    }
+    
+    // Find closest target in range
+    let bestTarget = targets[0];
+    let bestDist = Math.hypot(
+      bestTarget.position.x - boat.position.x,
+      bestTarget.position.y - boat.position.y
+    );
+    
+    for (const target of targets) {
+      const dist = Math.hypot(
+        target.position.x - boat.position.x,
+        target.position.y - boat.position.y
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestTarget = target;
+      }
+    }
+    
+    // Check if in range
+    if (bestDist <= boat.attackRange) {
+      boat.targetBoatId = bestTarget.id;
+      this.fireAtTarget(boat, bestTarget.position, bestTarget.id);
+    }
   }
   
   private updateSailing(boat: Boat, deltaTime: number): void {
@@ -243,7 +358,7 @@ export class BoatManager {
   }
   
   /**
-   * Render all boats
+   * Render all boats and projectiles
    */
   render(
     ctx: CanvasRenderingContext2D,
@@ -251,9 +366,20 @@ export class BoatManager {
     cameraY: number,
     gameTime: number
   ): void {
+    // Render projectiles behind boats
+    this.projectileSystem.render(ctx, cameraX, cameraY);
+    
+    // Render boats
     for (const boat of this.boats.values()) {
       this.renderBoat(ctx, boat, cameraX, cameraY, gameTime);
     }
+  }
+  
+  /**
+   * Get the projectile system for external access
+   */
+  getProjectileSystem(): ShipProjectileSystem {
+    return this.projectileSystem;
   }
   
   private renderBoat(

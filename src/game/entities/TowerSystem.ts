@@ -1,6 +1,7 @@
 // ============================================
 // TOWER SYSTEM
 // Manages tower placement, upgrades, targeting, and attacks
+// Now uses beam projectiles with trails and AOE effects
 // ============================================
 
 import type { Position, FactionId } from '../../types/index.ts';
@@ -16,6 +17,8 @@ import {
   getTowerUpgradeCost 
 } from '../../types/world.ts';
 import { generateId } from '../core/GridSystem.ts';
+import { ShipProjectileSystem, BeamColor } from '../systems/ShipProjectileSystem.ts';
+import { upgradeSystem } from '../systems/UpgradeSystem.ts';
 
 // === PROJECTILE ===
 
@@ -46,11 +49,22 @@ export interface TowerMenuState {
   playerGold: number;
 }
 
+// === TOWER TYPE TO BEAM COLOR MAP ===
+
+const TOWER_BEAM_COLORS: Record<TowerType, BeamColor> = {
+  arrow: 'green',      // Green precision beams
+  cannon: 'red',       // Red explosive beams
+  magic: 'purple',     // Purple arcane beams
+  frost: 'green',      // Green with frost AOE
+  fire: 'orange'       // Orange fire beams
+};
+
 // === TOWER MANAGER ===
 
 export class TowerManager {
   private towers: Map<string, Tower> = new Map();
-  private projectiles: TowerProjectile[] = [];
+  private projectiles: TowerProjectile[] = [];  // Legacy - kept for compatibility
+  private projectileSystem: ShipProjectileSystem;  // New beam projectile system
   private towerSprites: Map<string, HTMLImageElement> = new Map();
   private selectedTowerId: string | null = null;
   
@@ -67,9 +81,27 @@ export class TowerManager {
   // Callback for when damage is dealt
   public onDamageDealt: ((targetId: string, damage: number, towerId: string, isBurn?: boolean) => void) | null = null;
   public onKill: ((targetId: string, towerId: string) => void) | null = null;
+  public onAOEDamage: ((position: Position, radius: number, damage: number, faction: FactionId, excludeIds: Set<string>) => string[]) | null = null;
   
   constructor() {
     this.loadSprites();
+    this.projectileSystem = new ShipProjectileSystem();
+    
+    // Wire up damage callbacks
+    this.projectileSystem.onDamage = (targetId, damage, projId, isAOE) => {
+      // Find tower that fired this projectile
+      for (const tower of this.towers.values()) {
+        // Track damage for tower
+        if (!isAOE) {
+          tower.totalDamageDealt += damage;
+        }
+      }
+      this.onDamageDealt?.(targetId, damage, projId, isAOE);
+    };
+    
+    this.projectileSystem.onAOEDamage = (pos, radius, damage, faction, excludeIds) => {
+      return this.onAOEDamage?.(pos, radius, damage, faction, excludeIds) ?? [];
+    };
   }
   
   private async loadSprites(): Promise<void> {
@@ -348,6 +380,40 @@ export class TowerManager {
     stats: ReturnType<typeof getTowerStats>,
     def: TowerDefinition
   ): void {
+    // Get beam color for this tower type
+    const beamColor = TOWER_BEAM_COLORS[tower.type] || 'green';
+    
+    // Get upgrade stats if available
+    const upgradeStats = upgradeSystem.getComputedStats(tower.id);
+    const damage = upgradeStats?.damage ?? stats.damage;
+    const aoeRadius = upgradeStats?.aoeRadius ?? (def.splashRadius || 40);
+    const accuracy = upgradeStats?.accuracy ?? 85;
+    
+    // Apply accuracy - miss chance
+    if (Math.random() * 100 > accuracy) {
+      // Miss - offset target position
+      const missOffset = 30 + Math.random() * 20;
+      const missAngle = Math.random() * Math.PI * 2;
+      targetPos = {
+        x: targetPos.x + Math.cos(missAngle) * missOffset,
+        y: targetPos.y + Math.sin(missAngle) * missOffset
+      };
+    }
+    
+    // Fire beam projectile with trails and AOE
+    this.projectileSystem.fireProjectile({
+      shipId: tower.id,  // Using shipId field for tower ID
+      targetId,
+      sourcePosition: tower.position,
+      targetPosition: targetPos,
+      damage,
+      faction: tower.owner,
+      beamColor,
+      speed: this.getProjectileSpeed(def.projectileType),
+      aoeRadius
+    });
+    
+    // Also create legacy projectile for backward compatibility
     const projectile: TowerProjectile = {
       id: generateId(),
       towerId: tower.id,
@@ -358,56 +424,56 @@ export class TowerManager {
       damage: stats.damage,
       speed: this.getProjectileSpeed(def.projectileType),
       splashRadius: def.splashRadius,
-      slowEffect: def.slowEffect ? def.slowEffect + (tower.level - 1) * 0.05 : undefined, // +5% slow per level
-      burnDamage: def.burnDamage ? def.burnDamage + (tower.level - 1) * 2 : undefined, // +2 DPS per level
-      lifetime: 3 // Max 3 seconds
+      slowEffect: def.slowEffect ? def.slowEffect + (tower.level - 1) * 0.05 : undefined,
+      burnDamage: def.burnDamage ? def.burnDamage + (tower.level - 1) * 2 : undefined,
+      lifetime: 3
     };
     
-    this.projectiles.push(projectile);
+    // Don't add to legacy system - beam system handles everything
+    // this.projectiles.push(projectile);
   }
   
   private getProjectileSpeed(type: TowerProjectile['type']): number {
     switch (type) {
-      case 'arrow': return 400;
-      case 'cannonball': return 250;
-      case 'magic_bolt': return 350;
-      case 'frost_shard': return 300;
-      case 'fireball': return 280;
-      default: return 300;
+      case 'arrow': return 450;      // Fast precision
+      case 'cannonball': return 300; // Slow but powerful
+      case 'magic_bolt': return 400; // Medium speed
+      case 'frost_shard': return 350; // Chilling speed
+      case 'fireball': return 320;   // Fiery projectile
+      default: return 350;
     }
   }
   
-  private updateProjectiles(deltaTime: number): void {
+  private updateProjectiles(deltaTime: number, getTargetPosition?: (id: string) => Position | null): void {
+    // Update beam projectile system
+    this.projectileSystem.update(deltaTime * 1000, getTargetPosition);
+    
+    // Legacy projectile system (kept for compatibility but not used)
     const toRemove: number[] = [];
     
     for (let i = 0; i < this.projectiles.length; i++) {
       const proj = this.projectiles[i];
       
-      // Move towards target
       const dx = proj.targetPosition.x - proj.position.x;
       const dy = proj.targetPosition.y - proj.position.y;
       const dist = Math.hypot(dx, dy);
       
       if (dist < 10) {
-        // Hit target
         this.onProjectileHit(proj);
         toRemove.push(i);
         continue;
       }
       
-      // Move projectile
       const moveSpeed = proj.speed * deltaTime;
       proj.position.x += (dx / dist) * moveSpeed;
       proj.position.y += (dy / dist) * moveSpeed;
       
-      // Timeout
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
         toRemove.push(i);
       }
     }
     
-    // Remove hit/expired projectiles
     for (let i = toRemove.length - 1; i >= 0; i--) {
       this.projectiles.splice(toRemove[i], 1);
     }
@@ -423,10 +489,6 @@ export class TowerManager {
         tower.totalDamageDealt += proj.damage;
       }
     }
-    
-    // TODO: Handle splash damage
-    // TODO: Handle slow effect
-    // TODO: Handle burn damage over time
   }
   
   // === TOWER DAMAGE ===
@@ -503,12 +565,15 @@ export class TowerManager {
     cameraY: number,
     gameTime: number
   ): void {
+    // Render beam projectiles first (behind towers)
+    this.projectileSystem.render(ctx, cameraX, cameraY);
+    
     // Render all towers
     for (const tower of this.towers.values()) {
       this.renderTower(ctx, tower, cameraX, cameraY, gameTime);
     }
     
-    // Render projectiles
+    // Render legacy projectiles (if any)
     this.renderProjectiles(ctx, cameraX, cameraY);
     
     // Render selection if any
@@ -518,6 +583,13 @@ export class TowerManager {
         this.renderTowerSelection(ctx, tower, cameraX, cameraY);
       }
     }
+  }
+  
+  /**
+   * Get the projectile system for external access
+   */
+  getProjectileSystem(): ShipProjectileSystem {
+    return this.projectileSystem;
   }
   
   private renderTower(
