@@ -1,10 +1,19 @@
 {
   "framework": "vite",
   "buildCommand": "cd src && npm install && npm run build",
-  "outputDirectory": ".",
+  "outputDirectory": "output",
   "installCommand": "cd src && npm install",
   "devCommand": "cd src && npm run dev",
   "rewrites": [
-    { "source": "/game", "destination": "/src/dist/game.html" }
+    { "source": "/game", "destination": "/game.html" },
+    { "source": "/(.*)", "destination": "/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
   ]
 }

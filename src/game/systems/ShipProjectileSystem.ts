@@ -16,28 +16,28 @@ export interface BeamConfig {
   aoeDamageMultiplier: number;
 }
 
-// Beam sprites from bulletcolors folder (relative to project root)
+// Beam sprites from bulletcolors folder
 export const BEAM_CONFIGS: Record<BeamColor, BeamConfig> = {
   green: {
-    path: '../sprites/bulletcolors/beam_green.png',
+    path: 'sprites/bulletcolors/beam_green.png',
     trailColor: '#00ff88',
     glowColor: 'rgba(0, 255, 136, 0.6)',
     aoeDamageMultiplier: 0.8  // Poison/acid - lower initial, DOT potential
   },
   orange: {
-    path: '../sprites/bulletcolors/beam_orange.png',
+    path: 'sprites/bulletcolors/beam_orange.png',
     trailColor: '#ff8800',
     glowColor: 'rgba(255, 136, 0, 0.6)',
     aoeDamageMultiplier: 1.2  // Fire - high damage
   },
   purple: {
-    path: '../sprites/bulletcolors/beam_purple.png',
+    path: 'sprites/bulletcolors/beam_purple.png',
     trailColor: '#aa44ff',
     glowColor: 'rgba(170, 68, 255, 0.6)',
     aoeDamageMultiplier: 1.0  // Magic - balanced
   },
   red: {
-    path: '../sprites/bulletcolors/beam_red.png',
+    path: 'sprites/bulletcolors/beam_red.png',
     trailColor: '#ff2244',
     glowColor: 'rgba(255, 34, 68, 0.6)',
     aoeDamageMultiplier: 1.5  // Explosive - highest AOE
@@ -57,10 +57,10 @@ export interface AOEEffectConfig {
   damageMultiplier: number;
 }
 
-// AOE effects from effects/pixel/ folder (relative to project root)
+// AOE effects from effects/pixel/ folder
 export const AOE_EFFECTS: Record<string, AOEEffectConfig> = {
   fire_explosion: {
-    spritesheet: '../effects/effects/pixel/11_fire_spritesheet.png',
+    spritesheet: 'effects/effects/pixel/11_fire_spritesheet.png',
     frameWidth: 100,
     frameHeight: 100,
     frameCount: 32,
@@ -70,7 +70,7 @@ export const AOE_EFFECTS: Record<string, AOEEffectConfig> = {
     damageMultiplier: 0.5
   },
   magic_burst: {
-    spritesheet: '../effects/effects/pixel/1_magicspell_spritesheet.png',
+    spritesheet: 'effects/effects/pixel/1_magicspell_spritesheet.png',
     frameWidth: 100,
     frameHeight: 100,
     frameCount: 32,
@@ -80,7 +80,7 @@ export const AOE_EFFECTS: Record<string, AOEEffectConfig> = {
     damageMultiplier: 0.4
   },
   vortex: {
-    spritesheet: '../effects/effects/pixel/13_vortex_spritesheet.png',
+    spritesheet: 'effects/effects/pixel/13_vortex_spritesheet.png',
     frameWidth: 100,
     frameHeight: 100,
     frameCount: 32,
@@ -90,7 +90,7 @@ export const AOE_EFFECTS: Record<string, AOEEffectConfig> = {
     damageMultiplier: 0.3
   },
   freeze_burst: {
-    spritesheet: '../effects/effects/pixel/19_freezing_spritesheet.png',
+    spritesheet: 'effects/effects/pixel/19_freezing_spritesheet.png',
     frameWidth: 100,
     frameHeight: 100,
     frameCount: 24,
@@ -100,7 +100,7 @@ export const AOE_EFFECTS: Record<string, AOEEffectConfig> = {
     damageMultiplier: 0.35
   },
   weapon_impact: {
-    spritesheet: '../effects/effects/pixel/10_weaponhit_spritesheet.png',
+    spritesheet: 'effects/effects/pixel/10_weaponhit_spritesheet.png',
     frameWidth: 100,
     frameHeight: 100,
     frameCount: 16,
@@ -110,7 +110,7 @@ export const AOE_EFFECTS: Record<string, AOEEffectConfig> = {
     damageMultiplier: 0.6
   },
   bright_fire: {
-    spritesheet: '../effects/effects/pixel/9_brightfire_spritesheet.png',
+    spritesheet: 'effects/effects/pixel/9_brightfire_spritesheet.png',
     frameWidth: 100,
     frameHeight: 100,
     frameCount: 32,

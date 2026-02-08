@@ -4,6 +4,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 export default defineConfig({
   root: '.',
   base: './',
+  publicDir: false, // Don't auto-copy publicDir
   server: {
     port: 3000,
     open: '/game.html',
@@ -12,41 +13,32 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          // Tiny Swords sprite pack - Units folder
-          src: '../Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/2DAssets/Units',
-          dest: 'sprites/tiny-swords'
+          src: 'dist/tiny-swords',
+          dest: '',
         },
         {
-          // Tiny Swords sprite pack - Terrain folder
-          src: '../Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/2DAssets/Terrain',
-          dest: 'sprites/tiny-swords'
+          src: 'dist/miniworld',
+          dest: '',
         },
         {
-          // Tiny Swords sprite pack - Buildings folder
-          src: '../Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/2DAssets/Buildings',
-          dest: 'sprites/tiny-swords'
+          src: 'dist/heroes',
+          dest: '',
         },
         {
-          // MiniWorld sprites - Characters
-          src: '../addons/MiniWorldSprites/Characters',
-          dest: 'sprites/miniworld'
+          src: '../sprites/bulletcolors',
+          dest: 'sprites',
         },
         {
-          // MiniWorld sprites - Buildings
-          src: '../addons/MiniWorldSprites/Buildings',
-          dest: 'sprites/miniworld'
+          src: '../effects',
+          dest: '',
         },
-        {
-          // Hero sprites from uuidsprites (GIF animations)
-          src: '../uuidsprites/dist/2draces',
-          dest: 'sprites/heroes'
-        }
-      ]
-    })
+      ],
+    }),
   ],
   build: {
-    outDir: 'dist',
+    outDir: '../output',
     assetsDir: 'assets',
+    emptyOutDir: true,
     rollupOptions: {
       input: 'game.html',
     },
