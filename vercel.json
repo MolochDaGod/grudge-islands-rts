@@ -1,12 +1,11 @@
 {
-  "framework": "vite",
-  "buildCommand": "cd src && npm install && npm run build",
+  "version": 2,
+  "buildCommand": "cd src && npm ci && npm run build",
   "outputDirectory": "output",
-  "installCommand": "cd src && npm install",
-  "devCommand": "cd src && npm run dev",
+  "installCommand": "echo 'Skip root install'",
+  "framework": null,
   "rewrites": [
-    { "source": "/game", "destination": "/game.html" },
-    { "source": "/(.*)", "destination": "/$1" }
+    { "source": "/game", "destination": "/game.html" }
   ],
   "headers": [
     {
