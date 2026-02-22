@@ -19,5 +19,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts"],
+  "exclude": ["game/scenes/GameScene.ts"]
 }

@@ -13,16 +13,14 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: 'dist/tiny-swords',
-          dest: '',
+          src: '../Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/2DAssets',
+          dest: 'sprites',
+          rename: 'tiny-swords',
         },
         {
-          src: 'dist/miniworld',
-          dest: '',
-        },
-        {
-          src: 'dist/heroes',
-          dest: '',
+          src: '../addons/MiniWorldSprites',
+          dest: 'sprites',
+          rename: 'miniworld',
         },
         {
           src: '../sprites/bulletcolors',

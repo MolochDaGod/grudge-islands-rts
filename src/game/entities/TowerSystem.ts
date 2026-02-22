@@ -413,24 +413,7 @@ export class TowerManager {
       aoeRadius
     });
     
-    // Also create legacy projectile for backward compatibility
-    const projectile: TowerProjectile = {
-      id: generateId(),
-      towerId: tower.id,
-      type: def.projectileType,
-      position: { ...tower.position },
-      targetPosition: { ...targetPos },
-      targetId,
-      damage: stats.damage,
-      speed: this.getProjectileSpeed(def.projectileType),
-      splashRadius: def.splashRadius,
-      slowEffect: def.slowEffect ? def.slowEffect + (tower.level - 1) * 0.05 : undefined,
-      burnDamage: def.burnDamage ? def.burnDamage + (tower.level - 1) * 2 : undefined,
-      lifetime: 3
-    };
-    
-    // Don't add to legacy system - beam system handles everything
-    // this.projectiles.push(projectile);
+    // Legacy projectile creation removed - beam system handles everything
   }
   
   private getProjectileSpeed(type: TowerProjectile['type']): number {

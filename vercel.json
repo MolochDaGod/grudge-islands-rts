@@ -1,10 +1,11 @@
 {
   "version": 2,
+  "framework": null,
+  "installCommand": "echo 'Skip root install'",
   "buildCommand": "cd src && npm ci && npm run build",
   "outputDirectory": "output",
-  "installCommand": "echo 'Skip root install'",
-  "framework": null,
   "rewrites": [
+    { "source": "/", "destination": "/game.html" },
     { "source": "/game", "destination": "/game.html" }
   ],
   "headers": [
