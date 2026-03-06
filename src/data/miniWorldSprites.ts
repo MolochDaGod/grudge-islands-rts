@@ -3,8 +3,8 @@
 // Sprite sheet definitions for terrain, buildings, units
 // ============================================
 
-// Path relative to src/dist/ where game.html is served
-const SPRITE_BASE = '../../addons/MiniWorldSprites';
+// Path relative to game.html — matches both dev proxy and prod static copy
+const SPRITE_BASE = './sprites/miniworld';
 
 // === TERRAIN TILES (16x16 each) ===
 
@@ -432,8 +432,8 @@ export const ANIMAL_SPRITES = {
 // === TINY SWORDS FACTION BUILDINGS ===
 // High-quality building sprites for each faction
 
-// Path relative to src/dist/ where game.html is served
-const TINY_SWORDS_BASE = '../../Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/2DAssets/Buildings';
+// Path relative to game.html — matches both dev proxy and prod static copy
+const TINY_SWORDS_BASE = './sprites/tiny-swords/Buildings';
 
 export type TinySwordsFaction = 'crusade' | 'goblin' | 'legion' | 'fabled';
 
